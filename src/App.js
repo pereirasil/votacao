@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { FaWhatsapp } from 'react-icons/fa';
 import { FaTelegramPlane } from 'react-icons/fa';
 import io from 'socket.io-client';
+import api from './utils/api';
 
 // Instância única do socket para evitar reconexões a cada render
-const socket = io('http://192.168.0.127:3000', {
+const socket = io(process.env.REACT_APP_BACKEND_URL || 'http://localhost:3000', {
   transports: ['websocket'], // Garante que está usando WebSocket direto
   reconnectionAttempts: 5, // Tenta reconectar até 5 vezes
 });
@@ -88,6 +89,19 @@ const App = () => {
       socket.emit('join', username);
     }
   }, [isLoggedIn, username]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await api.get('/some-endpoint');
+        console.log('Dados do backend:', response.data);
+      } catch (error) {
+        console.error('Erro ao buscar dados do backend:', error);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleLogin = () => {
     if (username.trim() === '') {
