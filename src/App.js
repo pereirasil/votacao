@@ -30,6 +30,8 @@ const App = () => {
   const [averageVote, setAverageVote] = useState(null); // Média dos votos
   // votesStatus mapeia (username em lowercase) para o voto; antes da revelação, o valor será 'X'
   const [votesStatus, setVotesStatus] = useState({});
+  const [currentTime, setCurrentTime] = useState(new Date());
+
 
   useEffect(() => {
     socket.on('updateUsers', (updatedUsers) => {
@@ -240,6 +242,14 @@ const App = () => {
     }
   };
 
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval); // Limpa o intervalo ao desmontar o componente
+  }, []);
+
   return (
     <div style={styles.app}>
       {!isLoggedIn ? (
@@ -260,6 +270,7 @@ const App = () => {
       ) : (
         <div className="container" id="voting-screen">
           <h2>Votação</h2>
+          <p>Hora atual: {currentTime.toLocaleTimeString()}</p>
           <p id="welcome-user">{`Bem-vindo, ${username}!`}</p>
           <p>Participantes: {users.map((user) => user.username).join(', ')}</p>
           <div style={styles.colorPickerContainer}>
@@ -342,6 +353,7 @@ const App = () => {
           </button>
         </div>
       )}
+      
     </div>
   );
 };
