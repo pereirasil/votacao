@@ -40,8 +40,13 @@ const LoginPage = () => {
     }
     
     // Save user data
+    const userData = {
+      username: username.trim(),
+      avatar: avatars.find(a => a.id === selectedAvatar)?.src
+    };
     localStorage.setItem('userName', username.trim());
     localStorage.setItem('userRole', roomId ? 'participant' : 'moderator');
+    localStorage.setItem('userData', JSON.stringify(userData));
     
     // Save room ID if available
     if (roomId) {
