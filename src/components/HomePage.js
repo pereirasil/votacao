@@ -10,13 +10,15 @@ import hpLogo from '../assets/hp.svg';
 import deloitteLogo from '../assets/deloitte.svg';
 import figmaLogo from '../assets/figma.svg';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://192.168.0.127:3001';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://192.168.0.127:3002';
 
 const socket = io(BACKEND_URL, {
   transports: ['websocket'],
   reconnectionAttempts: 5,
   reconnection: true,
   reconnectionDelay: 1000,
+  path: '/socket.io/',
+  autoConnect: true,
 });
 
 const HomePage = () => {
@@ -34,29 +36,36 @@ const HomePage = () => {
     localStorage.removeItem('userName');
     localStorage.removeItem('userRole');
     
+    console.log('🔄 Iniciando conexão com o servidor:', BACKEND_URL);
+    
     socket.on('connect', () => {
-      console.log('✅ Socket conectado. ID:', socket.id);
+      console.log('✅ Conexão estabelecida com sucesso. ID do Socket:', socket.id);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('❌ Erro na conexão Socket:', error);
-      setError('Erro ao conectar ao servidor. Por favor, tente novamente.');
+      console.error('❌ Erro na conexão com o servidor:', error);
+      setError('Não foi possível conectar ao servidor. Por favor, tente novamente.');
     });
 
     socket.on('error', (error) => {
-      console.error('❌ Erro recebido:', error);
+      console.error('❌ Erro recebido do servidor:', error);
       setError(error.message);
     });
 
     socket.on('roomCreated', (data) => {
-      console.log('✅ Sala criada:', data);
+      console.log('✅ Nova sala criada:', data);
       setNewRoomId(data.roomId);
       setShowCreateRoomModal(true);
     });
 
     socket.on('activeRooms', (rooms) => {
-      console.log('📋 Salas ativas recebidas:', rooms);
+      console.log('📋 Lista de salas ativas recebida:', rooms);
       setActiveRooms(rooms);
+    });
+
+    // Adicionar listener para todos os eventos
+    socket.onAny((eventName, ...args) => {
+      console.log('📡 Evento recebido:', eventName, args);
     });
 
     return () => {
@@ -65,35 +74,67 @@ const HomePage = () => {
       socket.off('error');
       socket.off('roomCreated');
       socket.off('activeRooms');
+      socket.offAny();
     };
   }, []);
 
   const handleCreateRoom = () => {
-    console.log('🎲 Criando nova sala');
-    socket.emit('createRoom', {
-      roomName: 'Nova Sala',
-      roomType: 'planning-poker'
-    }, (response) => {
-      if (response?.error) {
-        setError(response.error);
-        return;
-      }
-      console.log('✅ Sala criada:', response);
-      setNewRoomId(response.roomId);
-      setShowCreateRoomModal(true);
+    console.log('🎲 Iniciando processo de criação de nova sala...');
+    console.log('Estado atual do modal:', { showCreateRoomModal });
+    console.log('Estado do socket:', { 
+      connected: socket.connected,
+      id: socket.id,
+      disconnected: socket.disconnected
     });
+    
+    // Verificar se o socket está conectado
+    if (!socket.connected) {
+      console.error('❌ Socket não está conectado!');
+      setError('Erro de conexão com o servidor. Por favor, recarregue a página.');
+      return;
+    }
+
+    console.log('✅ Socket conectado, enviando requisição...');
+    
+    try {
+      socket.emit('createRoom', {
+        roomName: 'Nova Sala',
+        userName: 'Host'
+      }, (response) => {
+        console.log('📬 Resposta recebida do servidor:', response);
+        if (response?.error) {
+          console.error('❌ Erro ao criar sala:', response.error);
+          setError(response.error);
+          return;
+        }
+        console.log('✅ Sala criada com sucesso:', response);
+        setNewRoomId(response.roomId);
+        setShowCreateRoomModal(true);
+      });
+    } catch (error) {
+      console.error('❌ Erro ao emitir evento createRoom:', error);
+      setError('Erro ao criar sala. Por favor, tente novamente.');
+    }
   };
+
+  // Adicionar log para monitorar mudanças no estado do modal
+  useEffect(() => {
+    console.log('Estado do modal atualizado:', { showCreateRoomModal });
+  }, [showCreateRoomModal]);
 
   const handleCopyRoomLink = () => {
     const roomLink = `${window.location.origin}/login?roomId=${newRoomId}`;
+    console.log('📋 Copiando link da sala:', roomLink);
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(roomLink)
         .then(() => {
+          console.log('✅ Link copiado com sucesso');
           setCopySuccess(true);
           setTimeout(() => setCopySuccess(false), 2000);
         })
-        .catch(() => {
+        .catch((error) => {
+          console.error('❌ Erro ao copiar link:', error);
           fallbackCopyToClipboard(roomLink);
         });
     } else {
@@ -117,9 +158,15 @@ const HomePage = () => {
   };
 
   const handleStartRoom = () => {
-    if (newRoomId) {
-      navigate(`/login?roomId=${newRoomId}`);
+    console.log('🚀 Iniciando sala...', { newRoomId });
+    if (!newRoomId) {
+      console.error('❌ ID da sala não disponível');
+      setError('Erro ao iniciar sala. ID não disponível.');
+      return;
     }
+    // Salvar o ID da sala no localStorage antes de navegar
+    localStorage.setItem('currentRoom', newRoomId);
+    navigate(`/login?roomId=${newRoomId}`);
   };
 
   const handleJoinRoom = () => {
@@ -156,7 +203,13 @@ const HomePage = () => {
           <h1>Scrum Poker para<br />times ágeis</h1>
           <p>Estimativas fáceis e divertidas.</p>
           <div className="room-buttons">
-            <button className="start-game-btn large" onClick={handleCreateRoom}>
+            <button 
+              className="start-game-btn large" 
+              onClick={() => {
+                console.log('Botão Criar Nova Sala clicado');
+                handleCreateRoom();
+              }}
+            >
               <FaPlus /> Criar Nova Sala
             </button>
             <button className="join-room-btn large" onClick={() => setShowRoomModal(true)}>
@@ -244,14 +297,21 @@ const HomePage = () => {
       )}
 
       {showCreateRoomModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateRoomModal(false)}>
-          <div className="room-modal create-room-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay" onClick={() => {
+          console.log('Modal overlay clicado - fechando modal');
+          setShowCreateRoomModal(false);
+        }}>
+          <div className="room-modal create-room-modal" onClick={e => {
+            console.log('Modal clicado - prevenindo propagação');
+            e.stopPropagation();
+          }}>
             <h2>Nova Sala Criada</h2>
             <div className="room-info">
-              <p>ID da Sala: <strong>{newRoomId}</strong></p>
+              <p>ID da Sala: <strong>{newRoomId || 'Carregando...'}</strong></p>
               <button 
                 className="copy-link-btn"
                 onClick={handleCopyRoomLink}
+                disabled={!newRoomId}
               >
                 <FaCopy /> {copySuccess ? 'Link Copiado!' : 'Copiar Link'}
               </button>
@@ -260,10 +320,24 @@ const HomePage = () => {
               Compartilhe este link com sua equipe para que eles possam se juntar à sala.
             </p>
             <div className="modal-buttons">
-              <button className="cancel-btn" onClick={() => setShowCreateRoomModal(false)}>
+              <button 
+                className="cancel-btn" 
+                onClick={() => {
+                  console.log('Botão Cancelar clicado');
+                  setShowCreateRoomModal(false);
+                }}
+              >
                 Cancelar
               </button>
-              <button className="join-btn" onClick={handleStartRoom}>
+              <button 
+                className="join-btn" 
+                onClick={handleStartRoom}
+                disabled={!newRoomId}
+                style={{ 
+                  opacity: newRoomId ? 1 : 0.5,
+                  cursor: newRoomId ? 'pointer' : 'not-allowed'
+                }}
+              >
                 Iniciar Sala
               </button>
             </div>

@@ -4,7 +4,7 @@ import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy } from 'react-icons/f
 import io from 'socket.io-client';
 import './style.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://192.168.0.127:3001';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://191.252.177.174:3001/';
 
 const socket = io(BACKEND_URL, {
   transports: ['websocket'],
@@ -23,8 +23,6 @@ const Votacao = () => {
   const [votesRevealed, setVotesRevealed] = useState(false);
   const [revealedVotesData, setRevealedVotesData] = useState({});
   const [averageVote, setAverageVote] = useState(null);
-  const [votesStatus, setVotesStatus] = useState({});
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [showResults, setShowResults] = useState(false);
   const [userAvatar, setUserAvatar] = useState(null);
 
@@ -123,7 +121,7 @@ const Votacao = () => {
     });
 
     const timeInterval = setInterval(() => {
-      setCurrentTime(new Date());
+      // setCurrentTime(new Date());
     }, 1000);
 
     return () => {
@@ -177,6 +175,7 @@ const Votacao = () => {
     setShowResults(false);
   };
 
+  // Função mantida para uso futuro na exibição dos resultados da votação
   const renderVoteResults = () => {
     if (!votesRevealed) return null;
 
