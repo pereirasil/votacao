@@ -4,7 +4,7 @@ import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy } from 'react-icons/f
 import io from 'socket.io-client';
 import './style.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://191.252.177.174:3001/';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://191.252.177.174:4000/';
 
 const socket = io(BACKEND_URL, {
   transports: ['websocket'],
