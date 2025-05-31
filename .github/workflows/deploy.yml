@@ -9,33 +9,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Job de build e deploy
+  # Job de deploy
   deploy:
     runs-on: ubuntu-latest
     steps:
-      # Faz o checkout do código do repositório
-      - name: Checkout do repositório
-        uses: actions/checkout@v3
-
-      # Configura o Node.js no ambiente
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-          cache: 'yarn'
-
-      # Instala o Yarn globalmente
-      - name: Instalar Yarn
-        run: npm install -g yarn
-
-      # Instala as dependências
-      - name: Instalar dependências
-        run: yarn install --frozen-lockfile
-
-      # Executa o build do projeto
-      - name: Build do projeto
-        run: yarn build
-
       # Faz o deploy via SSH usando senha
       - name: Deploy para o servidor
         uses: appleboy/ssh-action@v1.0.0
@@ -46,6 +23,6 @@ jobs:
           script: |
             cd /var/www/timeboard/votacao
             git pull origin main
-            yarn install --frozen-lockfile
+            yarn
             yarn build
             pm2 restart votacao || pm2 start yarn --name "votacao" -- start 
