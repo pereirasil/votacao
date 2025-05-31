@@ -25,4 +25,3 @@ jobs:
             git pull origin main
             yarn
             yarn build
-            pm2 restart votacao || pm2 start yarn --name "votacao" -- start 
