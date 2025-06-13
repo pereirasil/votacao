@@ -4,10 +4,15 @@ import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope } from 'r
 import io from 'socket.io-client';
 import './style.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://191.252.177.174:3003/';
+// Usa a URL do socket do ambiente
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'ws://localhost:5001';
 
-const socket = io(BACKEND_URL, {
-  transports: ['websocket'],
+const socket = io(SOCKET_URL, {
+  path: '/socket.io/',
+  transports: ['websocket', 'polling'],
+  secure: true,
+  rejectUnauthorized: false,
+  withCredentials: true,
   reconnectionAttempts: 5,
   reconnection: true,
   reconnectionDelay: 1000,
