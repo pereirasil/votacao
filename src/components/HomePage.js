@@ -30,6 +30,8 @@ const HomePage = () => {
   const [activeRooms, setActiveRooms] = useState([]);
   const [error, setError] = useState('');
   const [copySuccess, setCopySuccess] = useState(false);
+  const [isCheckingRoom, setIsCheckingRoom] = useState(false);
+  const [isRoomActive, setIsRoomActive] = useState(false);
 
   useEffect(() => {
     localStorage.removeItem('currentRoom');
@@ -126,22 +128,21 @@ const HomePage = () => {
   }, [showCreateRoomModal]);
 
   const handleCopyRoomLink = () => {
-    const roomLink = `${window.location.origin}/login?roomId=${newRoomId}`;
-    console.log('📋 Copiando link da sala:', roomLink);
+    console.log('📋 Copiando ID da sala:', newRoomId);
     
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(roomLink)
+      navigator.clipboard.writeText(newRoomId)
         .then(() => {
-          console.log('✅ Link copiado com sucesso');
+          console.log('✅ ID copiado com sucesso');
           setCopySuccess(true);
           setTimeout(() => setCopySuccess(false), 2000);
         })
         .catch((error) => {
-          console.error('❌ Erro ao copiar link:', error);
-          fallbackCopyToClipboard(roomLink);
+          console.error('❌ Erro ao copiar ID:', error);
+          fallbackCopyToClipboard(newRoomId);
         });
     } else {
-      fallbackCopyToClipboard(roomLink);
+      fallbackCopyToClipboard(newRoomId);
     }
   };
 
@@ -172,9 +173,46 @@ const HomePage = () => {
     navigate(`/login?roomId=${newRoomId}`);
   };
 
+  const verifyRoomId = (id) => {
+    if (!id.trim()) {
+      setError('');
+      setIsRoomActive(false);
+      return;
+    }
+
+    setIsCheckingRoom(true);
+    socket.emit('joinRoom', {
+      roomId: id.trim(),
+      userName: 'Verification'
+    }, (response) => {
+      setIsCheckingRoom(false);
+      if (response?.error) {
+        setError(response.error);
+        setIsRoomActive(false);
+      } else {
+        setError('');
+        setIsRoomActive(true);
+        // Leave the room after verification
+        socket.emit('leaveRoom', {
+          roomId: id.trim(),
+          userName: 'Verification'
+        });
+      }
+    });
+  };
+
   const handleJoinRoom = () => {
     if (!roomId.trim()) {
       setError('Por favor, insira o ID da sala');
+      return;
+    }
+
+    if (error) {
+      return;
+    }
+
+    if (!isRoomActive) {
+      setError('A sala não está ativa. Por favor, verifique o ID.');
       return;
     }
 
@@ -263,12 +301,14 @@ const HomePage = () => {
               placeholder="Digite o ID da sala"
               value={roomId}
               onChange={(e) => {
-                setRoomId(e.target.value);
-                setError('');
+                const newRoomId = e.target.value;
+                setRoomId(newRoomId);
+                verifyRoomId(newRoomId);
               }}
               maxLength={6}
             />
             {error && <p className="error-message">{error}</p>}
+            {isCheckingRoom && <p className="checking-message">Verificando sala...</p>}
             <div className="active-rooms">
               <h3>Salas Ativas</h3>
               <div className="rooms-list">
@@ -279,6 +319,7 @@ const HomePage = () => {
                     onClick={() => {
                       setRoomId(room.id);
                       setError('');
+                      setIsRoomActive(true);
                     }}
                   >
                     <span>Sala {room.id}</span>
@@ -291,7 +332,15 @@ const HomePage = () => {
               <button className="cancel-btn" onClick={() => setShowRoomModal(false)}>
                 Cancelar
               </button>
-              <button className="join-btn" onClick={handleJoinRoom}>
+              <button 
+                className="join-btn" 
+                onClick={handleJoinRoom}
+                disabled={!isRoomActive}
+                style={{ 
+                  opacity: isRoomActive ? 1 : 0.5,
+                  cursor: isRoomActive ? 'pointer' : 'not-allowed'
+                }}
+              >
                 Entrar na Sala
               </button>
             </div>
@@ -316,11 +365,11 @@ const HomePage = () => {
                 onClick={handleCopyRoomLink}
                 disabled={!newRoomId}
               >
-                <FaCopy /> {copySuccess ? 'Link Copiado!' : 'Copiar Link'}
+                <FaCopy /> {copySuccess ? 'ID Copiado!' : 'Copiar ID'}
               </button>
             </div>
             <p className="room-instructions">
-              Compartilhe este link com sua equipe para que eles possam se juntar à sala.
+              Compartilhe o ID da sala com sua equipe para que eles possam se juntar à votação.
             </p>
             <div className="modal-buttons">
               <button 

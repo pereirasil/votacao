@@ -127,11 +127,33 @@
   color: white;
   font-weight: bold;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.3s;
+  transition: transform 0.3s, background-color 0.3s;
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 
 .player-card.face-down {
   background: #E0E0E0;
+  transform: rotateY(180deg);
+}
+
+.player-card.selected {
+  background: #006B5B;
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.player-card.revealing {
+  animation: flipCard 0.6s ease-in-out;
+}
+
+@keyframes flipCard {
+  0% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(0deg);
+  }
 }
 
 .player-name {
@@ -212,15 +234,25 @@
 }
 
 .vote-card:hover {
-  transform: translateY(-5px);
+  transform: translateY(-4px);
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
 .vote-card.selected {
-  border-color: #4CAF50;
-  background-color: #E8F5E9;
-  transform: translateY(-5px);
-  box-shadow: 0 6px 12px rgba(76, 175, 80, 0.3);
+  background-color: #006B5B;
+  color: white;
+  border-color: #006B5B;
+}
+
+.vote-card.disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.vote-card.disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .share-container {
@@ -729,4 +761,124 @@
 
 .copy-link-button:hover {
   background-color: #138496;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.share-modal {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.close-modal {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #666;
+  padding: 0.5rem;
+  line-height: 1;
+}
+
+.share-modal h2 {
+  margin: 0 0 1.5rem;
+  color: #333;
+  text-align: center;
+  font-size: 1.5rem;
+}
+
+.share-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.share-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+  color: #333;
+}
+
+.share-option:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.share-option span {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.share-option.whatsapp {
+  background: #25D366;
+  color: white;
+}
+
+.share-option.telegram {
+  background: #0088cc;
+  color: white;
+}
+
+.share-option.email {
+  background: #EA4335;
+  color: white;
+}
+
+.share-option.copy {
+  background: #6c757d;
+  color: white;
+}
+
+.share-option.whatsapp:hover {
+  background: #128C7E;
+}
+
+.share-option.telegram:hover {
+  background: #0077B5;
+}
+
+.share-option.email:hover {
+  background: #D33426;
+}
+
+.share-option.copy:hover {
+  background: #5a6268;
+}
+
+@media (max-width: 480px) {
+  .share-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .share-modal {
+    width: 95%;
+    padding: 1.5rem;
+  }
 }

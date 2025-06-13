@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy } from 'react-icons/fa';
+import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope } from 'react-icons/fa';
 import io from 'socket.io-client';
 import './style.css';
 
@@ -25,6 +25,8 @@ const Votacao = () => {
   const [averageVote, setAverageVote] = useState(null);
   const [showResults, setShowResults] = useState(false);
   const [userAvatar, setUserAvatar] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [copySuccess, setCopySuccess] = useState(false);
 
   useEffect(() => {
     if (votesRevealed) {
@@ -113,11 +115,31 @@ const Votacao = () => {
       setRevealedVotesData({});
       setAverageVote(null);
       setShowResults(false);
+      setUsers(prevUsers => {
+        return prevUsers.map(user => ({
+          ...user,
+          hasVoted: false
+        }));
+      });
     });
 
     socket.on('error', (error) => {
       console.error('❌ Erro:', error);
       alert(error.message);
+    });
+
+    socket.on('newVote', (data) => {
+      console.log('👤 Novo voto:', data);
+      if (data.userName) {
+        setUsers(prevUsers => {
+          return prevUsers.map(user => {
+            if (user.name.toLowerCase() === data.userName.toLowerCase()) {
+              return { ...user, hasVoted: true };
+            }
+            return user;
+          });
+        });
+      }
     });
 
     const timeInterval = setInterval(() => {
@@ -132,12 +154,14 @@ const Votacao = () => {
   }, [roomId, navigate]);
 
   const handleSelectVote = (value) => {
+    if (!votesRevealed) {
       setSelectedCard(value);
-    socket.emit('vote', { 
-      roomId,
-      userName,
-      vote: value
-    });
+      socket.emit('vote', { 
+        roomId,
+        userName: userName,
+        vote: value
+      });
+    }
   };
 
   const handleRevealVotes = () => {
@@ -166,13 +190,56 @@ const Votacao = () => {
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}/login?roomId=${roomId}`;
-    navigator.clipboard.writeText(url)
-      .then(() => alert('Link copiado com sucesso!'))
-      .catch(() => alert('Erro ao copiar o link.'));
+    console.log('📋 Copiando link da sala:', url);
+    
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(() => {
+          console.log('✅ Link copiado com sucesso');
+          setCopySuccess(true);
+          setTimeout(() => setCopySuccess(false), 2000);
+        })
+        .catch((error) => {
+          console.error('❌ Erro ao copiar link:', error);
+          fallbackCopyToClipboard(url);
+        });
+    } else {
+      fallbackCopyToClipboard(url);
+    }
+  };
+
+  const fallbackCopyToClipboard = (text) => {
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    } catch (err) {
+      alert('Erro ao copiar o link. Por favor, copie manualmente.');
+    }
+  };
+
+  const handleShareModal = () => {
+    setShowShareModal(true);
+  };
+
+  const handleCloseShareModal = () => {
+    setShowShareModal(false);
   };
 
   const handleCloseResults = () => {
     setShowResults(false);
+  };
+
+  const handleEmailShare = () => {
+    const subject = encodeURIComponent('Entre na votação');
+    const body = encodeURIComponent(`Entre na votação: ${window.location.origin}/login?roomId=${roomId}`);
+    const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
+    window.open(gmailUrl, '_blank');
   };
 
   // Função mantida para uso futuro na exibição dos resultados da votação
@@ -233,19 +300,22 @@ const Votacao = () => {
   };
 
   const renderParticipants = () => {
+    const filteredUsers = users.filter(user => user.name !== 'Host');
     return (
       <div className="participants">
-        <h2>Participantes ({Object.keys(users).length})</h2>
+        <h2>Participantes ({filteredUsers.length})</h2>
         <div className="users-list">
-          {Object.entries(users).map(([userId, user]) => (
-            <div key={userId} className="user-item">
-              <img
-                src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.username}`}
-                alt={user.username}
-                className="user-avatar"
-              />
-              <span>{user.username}</span>
-            </div>
+          {filteredUsers.map((user, index) => (
+            user.name && (
+              <div key={user.id || index} className="user-item">
+                <img
+                  src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                  alt={user.name}
+                  className="user-avatar"
+                />
+                <span>{user.name}</span>
+              </div>
+            )
           ))}
         </div>
       </div>
@@ -278,88 +348,118 @@ const Votacao = () => {
 
         <div className="voting-area">
           <div className="table-circle">
-            {users.map((user, index) => (
-              <div 
-                key={user.id || index} 
-                className="player-slot"
-              >
-                <img 
-                  src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                  alt={user.name} 
-                  className="player-avatar"
-                />
-                <div className={`player-card ${!votesRevealed ? 'face-down' : ''}`}>
-                  {votesRevealed ? revealedVotesData[user.name] || '?' : '?'}
-          </div>
-                <span className="player-name">{user.name}</span>
-            </div>
+            {users.filter(user => user.name !== 'Host').map((user, index) => (
+              user.name && (
+                <div 
+                  key={user.id || index} 
+                  className="player-slot"
+                >
+                  <img 
+                    src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                    alt={user.name} 
+                    className="player-avatar"
+                  />
+                  <div className={`player-card ${!votesRevealed ? 'face-down' : ''} ${
+                    (user.name === userName && selectedCard) || user.hasVoted ? 'selected' : ''
+                  } ${votesRevealed ? 'revealing' : ''}`}>
+                    {votesRevealed ? revealedVotesData[user.name] || '?' : '?'}
+                  </div>
+                  <span className="player-name">{user.name}</span>
+                </div>
+              )
             ))}
             
-              <button
+            <button
               onClick={votesRevealed ? handleResetVoting : handleRevealVotes}
               className="reveal-button"
-              >
+            >
               {votesRevealed ? 'Nova Votação' : 'Revelar Cartas'}
-              </button>
+            </button>
           </div>
         </div>
         <div className="vote-cards-container">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((value) => (
-              <div
-                key={value}
-                className={`vote-card ${selectedCard === value ? 'selected' : ''}`}
-                onClick={() => !votesRevealed && handleSelectVote(value)}
-              >
-                {value}
-              </div>
-            ))}
-          </div>
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((value) => (
+            <div
+              key={value}
+              className={`vote-card ${selectedCard === value ? 'selected' : ''} ${votesRevealed ? 'disabled' : ''}`}
+              onClick={() => handleSelectVote(value)}
+            >
+              {value}
+            </div>
+          ))}
+        </div>
 
-          {votesRevealed && revealedVotesData && Object.keys(revealedVotesData).length > 0 && showResults && (
-            <div className="results-modal" onClick={handleCloseResults}>
-              <div className="results-content" onClick={e => e.stopPropagation()}>
-                <button className="close-results" onClick={handleCloseResults}>×</button>
-                <h2>Resultado da Votação</h2>
-                <div className="results-summary">
-                  <div className="average-vote">
-                    <span className="label">Média:</span>
-                    <span className="value">{averageVote}</span>
-                  </div>
-                  <div className="votes-breakdown">
-                    {Object.entries(revealedVotesData || {}).map(([name, vote]) => (
-                      <div key={name} className="vote-item">
-                        <span className="voter-name">{name}:</span>
-                        <span className="voter-vote">{vote}</span>
-                      </div>
-                    ))}
-                  </div>
+        {votesRevealed && revealedVotesData && Object.keys(revealedVotesData).length > 0 && showResults && (
+          <div className="results-modal" onClick={handleCloseResults}>
+            <div className="results-content" onClick={e => e.stopPropagation()}>
+              <button className="close-results" onClick={handleCloseResults}>×</button>
+              <h2>Resultado da Votação</h2>
+              <div className="results-summary">
+                <div className="average-vote">
+                  <span className="label">Média:</span>
+                  <span className="value">{averageVote}</span>
+                </div>
+                <div className="votes-breakdown">
+                  {Object.entries(revealedVotesData || {}).map(([name, vote]) => (
+                    <div key={name} className="vote-item">
+                      <span className="voter-name">{name}:</span>
+                      <span className="voter-vote">{vote}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          )}
-
-          <div className="share-container">
-          <button onClick={handleCopyLink} className="share-button">
-            <FaCopy /> Copiar Link
-            </button>
-            <a
-            href={`https://wa.me/?text=Entre na votação: ${window.location.origin}/login?roomId=${roomId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            className="social-share"
-            >
-            <FaWhatsapp />
-            </a>
-            <a
-            href={`https://t.me/share/url?url=${window.location.origin}/login?roomId=${roomId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            className="social-share"
-            >
-            <FaTelegramPlane />
-            </a>
           </div>
+        )}
+
+        <div className="share-container">
+          <button onClick={handleShareModal} className="share-button">
+            <FaCopy /> Compartilhar Sala
+          </button>
         </div>
+
+        {showShareModal && (
+          <div className="modal-overlay" onClick={handleCloseShareModal}>
+            <div className="share-modal" onClick={e => e.stopPropagation()}>
+              <button className="close-modal" onClick={handleCloseShareModal}>×</button>
+              <h2>Compartilhar Sala</h2>
+              <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
+                Escolha uma das opções abaixo para compartilhar o link da sala com seus colegas
+              </p>
+              <div className="share-options">
+                <button 
+                  className="share-option whatsapp"
+                  onClick={() => window.open(`https://wa.me/?text=Entre na votação: ${window.location.origin}/login?roomId=${roomId}`, '_blank')}
+                >
+                  <FaWhatsapp size={32} />
+                  <span>WhatsApp</span>
+                </button>
+                <button 
+                  className="share-option telegram"
+                  onClick={() => window.open(`https://t.me/share/url?url=${window.location.origin}/login?roomId=${roomId}`, '_blank')}
+                >
+                  <FaTelegramPlane size={32} />
+                  <span>Telegram</span>
+                </button>
+                <button 
+                  className="share-option email"
+                  onClick={handleEmailShare}
+                >
+                  <FaEnvelope size={32} />
+                  <span>Email</span>
+                </button>
+                <button 
+                  className="share-option copy"
+                  onClick={handleCopyLink}
+                >
+                  <FaCopy size={32} />
+                  <span>{copySuccess ? 'Link Copiado!' : 'Copiar Link'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

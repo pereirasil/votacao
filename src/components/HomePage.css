@@ -403,9 +403,16 @@
 }
 
 .error-message {
-  color: #e74c3c;
-  margin: 0.5rem 0;
+  color: #dc3545;
   font-size: 0.9rem;
+  margin-top: 0.5rem;
+}
+
+.checking-message {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  font-style: italic;
 }
 
 .active-rooms {
