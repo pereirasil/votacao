@@ -4,19 +4,90 @@ import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope } from 'r
 import io from 'socket.io-client';
 import './style.css';
 
-// Usa a URL do socket do ambiente
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'ws://localhost:5001';
+// Configurações do ambiente
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-const socket = io(SOCKET_URL, {
-  path: '/socket.io/',
-  transports: ['websocket', 'polling'],
-  secure: true,
-  rejectUnauthorized: false,
-  withCredentials: true,
-  reconnectionAttempts: 5,
-  reconnection: true,
-  reconnectionDelay: 1000,
+// Validação das variáveis de ambiente
+if (!SOCKET_URL) {
+  throw new Error('REACT_APP_SOCKET_URL não está definida no arquivo .env');
+}
+
+// Log detalhado das configurações
+console.log('🔧 Configurações do ambiente (Votação):', {
+  NODE_ENV: process.env.NODE_ENV,
+  SOCKET_URL,
+  IS_PRODUCTION,
+  SOCKET_PATH: process.env.REACT_APP_SOCKET_PATH,
+  DEV_ORIGINS: process.env.REACT_APP_DEV_ORIGINS,
+  PROD_ORIGINS: process.env.REACT_APP_PROD_ORIGINS
 });
+
+// Configurações do Socket.IO
+const socketConfig = {
+  path: process.env.REACT_APP_SOCKET_PATH || '/socket.io/',
+  transports: IS_PRODUCTION ? ['polling', 'websocket'] : ['websocket', 'polling'],
+  secure: IS_PRODUCTION,
+  rejectUnauthorized: false,
+  reconnection: true,
+  reconnectionAttempts: parseInt(process.env.REACT_APP_SOCKET_RECONNECTION_ATTEMPTS) || 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: parseInt(process.env.REACT_APP_SOCKET_TIMEOUT) || 45000,
+  autoConnect: false,
+  withCredentials: true,
+  upgrade: true,
+  pingTimeout: parseInt(process.env.REACT_APP_SOCKET_PING_TIMEOUT) || 60000,
+  pingInterval: parseInt(process.env.REACT_APP_SOCKET_PING_INTERVAL) || 25000,
+  upgradeTimeout: parseInt(process.env.REACT_APP_SOCKET_UPGRADE_TIMEOUT) || 10000
+};
+
+// Log das configurações do Socket.IO
+console.log('🔌 Configurações do Socket.IO (Votação):', socketConfig);
+
+const socket = io(SOCKET_URL, socketConfig);
+
+// Função para garantir conexão do socket
+const ensureSocketConnection = () => {
+  return new Promise((resolve, reject) => {
+    if (socket.connected) {
+      console.log('✅ Socket já está conectado (Votação):', {
+        id: socket.id,
+        transport: socket.io.engine?.transport?.name
+      });
+      resolve(socket);
+      return;
+    }
+
+    console.log('🔄 Tentando conectar ao servidor (Votação):', SOCKET_URL);
+
+    const timeout = setTimeout(() => {
+      console.error('❌ Timeout ao tentar conectar');
+      reject(new Error('Timeout ao conectar ao servidor'));
+    }, socketConfig.timeout);
+
+    socket.connect();
+
+    socket.once('connect', () => {
+      clearTimeout(timeout);
+      console.log('✅ Socket conectado (Votação):', {
+        id: socket.id,
+        transport: socket.io.engine?.transport?.name
+      });
+      resolve(socket);
+    });
+
+    socket.once('connected', (data) => {
+      console.log('✅ Conexão confirmada pelo servidor (Votação):', data);
+    });
+
+    socket.once('connect_error', (error) => {
+      clearTimeout(timeout);
+      console.error('❌ Erro de conexão (Votação):', error);
+      reject(error);
+    });
+  });
+};
 
 const Votacao = () => {
   const navigate = useNavigate();
@@ -63,18 +134,21 @@ const Votacao = () => {
     setUserName(storedUserName);
     setUserRole(storedUserRole);
 
-    socket.disconnect();
-    socket.connect();
-
-    socket.on('connect', () => {
-      console.log('✅ Socket conectado. ID:', socket.id);
-      socket.emit('joinRoom', {
-        roomId,
-        userName: storedUserName,
-        userRole: storedUserRole,
-        avatar: avatarUrl
+    // Iniciar conexão do socket
+    ensureSocketConnection()
+      .then(() => {
+        console.log('✅ Socket conectado. ID:', socket.id);
+        socket.emit('joinRoom', {
+          roomId,
+          userName: storedUserName,
+          userRole: storedUserRole,
+          avatar: avatarUrl
+        });
+      })
+      .catch((error) => {
+        console.error('❌ Erro na conexão:', error);
+        alert('Erro ao conectar com o servidor. Por favor, recarregue a página.');
       });
-    });
 
     socket.on('updateUsers', (userList) => {
       console.log('👥 Lista de usuários atualizada:', userList);
@@ -160,37 +234,70 @@ const Votacao = () => {
 
   const handleSelectVote = (value) => {
     if (!votesRevealed) {
-      setSelectedCard(value);
-      socket.emit('vote', { 
-        roomId,
-        userName: userName,
-        vote: value
-      });
+      ensureSocketConnection()
+        .then(() => {
+          setSelectedCard(value);
+          socket.emit('vote', { 
+            roomId,
+            userName: userName,
+            vote: value
+          });
+        })
+        .catch((error) => {
+          console.error('❌ Erro ao enviar voto:', error);
+          alert('Erro ao enviar voto. Por favor, tente novamente.');
+        });
     }
   };
 
   const handleRevealVotes = () => {
-    socket.emit('revealVotes', roomId);
+    ensureSocketConnection()
+      .then(() => {
+        socket.emit('revealVotes', roomId);
+      })
+      .catch((error) => {
+        console.error('❌ Erro ao revelar votos:', error);
+        alert('Erro ao revelar votos. Por favor, tente novamente.');
+      });
   };
 
   const handleResetVoting = () => {
-    socket.emit('resetVoting', roomId);
-    setSelectedCard(null);
-    setVotesRevealed(false);
-    setRevealedVotesData({});
-    setAverageVote(null);
+    ensureSocketConnection()
+      .then(() => {
+        socket.emit('resetVoting', roomId);
+        setSelectedCard(null);
+        setVotesRevealed(false);
+        setRevealedVotesData({});
+        setAverageVote(null);
+      })
+      .catch((error) => {
+        console.error('❌ Erro ao resetar votação:', error);
+        alert('Erro ao resetar votação. Por favor, tente novamente.');
+      });
   };
 
   const handleLogout = () => {
-    socket.emit('leaveRoom', {
-      roomId: roomId,
-      userName: userName
-    });
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userRole');
-    localStorage.removeItem('currentRoom');
-    localStorage.removeItem('userData');
-    navigate('/');
+    ensureSocketConnection()
+      .then(() => {
+        socket.emit('leaveRoom', {
+          roomId: roomId,
+          userName: userName
+        });
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('currentRoom');
+        localStorage.removeItem('userData');
+        navigate('/');
+      })
+      .catch((error) => {
+        console.error('❌ Erro ao sair da sala:', error);
+        // Mesmo com erro, vamos limpar os dados e redirecionar
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('currentRoom');
+        localStorage.removeItem('userData');
+        navigate('/');
+      });
   };
 
   const handleCopyLink = () => {
@@ -245,63 +352,6 @@ const Votacao = () => {
     const body = encodeURIComponent(`Entre na votação: ${window.location.origin}/login?roomId=${roomId}`);
     const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&su=${subject}&body=${body}`;
     window.open(gmailUrl, '_blank');
-  };
-
-  // Função mantida para uso futuro na exibição dos resultados da votação
-  const renderVoteResults = () => {
-    if (!votesRevealed) return null;
-
-    // Group votes by value
-    const voteGroups = {};
-    let totalVotes = 0;
-    let sum = 0;
-
-    Object.entries(revealedVotesData).forEach(([userId, vote]) => {
-      if (vote) {
-        const voteValue = vote.toString();
-        voteGroups[voteValue] = voteGroups[voteValue] || [];
-        voteGroups[voteValue].push(userId);
-        totalVotes++;
-        sum += parseFloat(vote);
-      }
-    });
-
-    const average = totalVotes > 0 ? (sum / totalVotes).toFixed(1) : 0;
-
-      return (
-      <div className="vote-results">
-        <div className="average-vote">
-          Média dos votos: {average}
-        </div>
-        <div className="vote-distribution">
-          {Object.entries(voteGroups)
-            .sort(([a], [b]) => parseFloat(a) - parseFloat(b))
-            .map(([value, users]) => {
-              const percentage = ((users.length / totalVotes) * 100).toFixed(1);
-      return (
-                <div key={value} className="vote-group">
-                  <span className="vote-value">{value}</span>
-                  <span className="vote-percentage">{percentage}%</span>
-                  <div className="vote-users">
-                    {users.map(userId => {
-                      const user = users.find(u => u.id === userId);
-                      return user ? (
-                        <img
-                          key={userId}
-                          src={user.avatar}
-                          alt={user.username}
-                          title={user.username}
-                          className="user-avatar"
-                        />
-                      ) : null;
-                    })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-        </div>
-      );
   };
 
   const renderParticipants = () => {

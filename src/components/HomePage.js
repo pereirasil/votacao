@@ -10,16 +10,96 @@ import hpLogo from '../assets/hp.svg';
 import deloitteLogo from '../assets/deloitte.svg';
 import figmaLogo from '../assets/figma.svg';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://192.168.0.127:3002';
+// Configurações do ambiente
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-const socket = io(BACKEND_URL, {
-  transports: ['websocket'],
-  reconnectionAttempts: 5,
-  reconnection: true,
-  reconnectionDelay: 1000,
-  path: '/socket.io/',
-  autoConnect: true,
+// Validação das variáveis de ambiente
+if (!SOCKET_URL) {
+  throw new Error('REACT_APP_SOCKET_URL não está definida no arquivo .env');
+}
+
+if (!BACKEND_URL) {
+  throw new Error('REACT_APP_BACKEND_URL não está definida no arquivo .env');
+}
+
+// Log detalhado das configurações
+console.log('🔧 Configurações do ambiente:', {
+  NODE_ENV: process.env.NODE_ENV,
+  BACKEND_URL,
+  SOCKET_URL,
+  IS_PRODUCTION,
+  SOCKET_PATH: process.env.REACT_APP_SOCKET_PATH,
+  DEV_ORIGINS: process.env.REACT_APP_DEV_ORIGINS,
+  PROD_ORIGINS: process.env.REACT_APP_PROD_ORIGINS
 });
+
+// Configurações do Socket.IO
+const socketConfig = {
+  path: process.env.REACT_APP_SOCKET_PATH || '/socket.io/',
+  transports: IS_PRODUCTION ? ['polling', 'websocket'] : ['websocket', 'polling'],
+  secure: IS_PRODUCTION,
+  rejectUnauthorized: false,
+  reconnection: true,
+  reconnectionAttempts: parseInt(process.env.REACT_APP_SOCKET_RECONNECTION_ATTEMPTS) || 10,
+  reconnectionDelay: 1000,
+  reconnectionDelayMax: 5000,
+  timeout: parseInt(process.env.REACT_APP_SOCKET_TIMEOUT) || 45000,
+  autoConnect: false,
+  withCredentials: true,
+  upgrade: true,
+  pingTimeout: parseInt(process.env.REACT_APP_SOCKET_PING_TIMEOUT) || 60000,
+  pingInterval: parseInt(process.env.REACT_APP_SOCKET_PING_INTERVAL) || 25000,
+  upgradeTimeout: parseInt(process.env.REACT_APP_SOCKET_UPGRADE_TIMEOUT) || 10000
+};
+
+// Log das configurações do Socket.IO
+console.log('🔌 Configurações do Socket.IO:', socketConfig);
+
+const socket = io(SOCKET_URL, socketConfig);
+
+// Função para garantir conexão do socket
+const ensureSocketConnection = () => {
+  return new Promise((resolve, reject) => {
+    if (socket.connected) {
+      console.log('✅ Socket já está conectado:', {
+        id: socket.id,
+        transport: socket.io.engine?.transport?.name
+      });
+      resolve(socket);
+      return;
+    }
+
+    console.log('🔄 Tentando conectar ao servidor:', SOCKET_URL);
+
+    const timeout = setTimeout(() => {
+      console.error('❌ Timeout ao tentar conectar');
+      reject(new Error('Timeout ao conectar ao servidor'));
+    }, socketConfig.timeout);
+
+    socket.connect();
+
+    socket.once('connect', () => {
+      clearTimeout(timeout);
+      console.log('✅ Socket conectado:', {
+        id: socket.id,
+        transport: socket.io.engine?.transport?.name
+      });
+      resolve(socket);
+    });
+
+    socket.once('connected', (data) => {
+      console.log('✅ Conexão confirmada pelo servidor:', data);
+    });
+
+    socket.once('connect_error', (error) => {
+      clearTimeout(timeout);
+      console.error('❌ Erro de conexão:', error);
+      reject(error);
+    });
+  });
+};
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -32,6 +112,7 @@ const HomePage = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [isCheckingRoom, setIsCheckingRoom] = useState(false);
   const [isRoomActive, setIsRoomActive] = useState(false);
+  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
 
   useEffect(() => {
     localStorage.removeItem('currentRoom');
@@ -40,9 +121,15 @@ const HomePage = () => {
     
     console.log('🔄 Iniciando conexão com o servidor:', BACKEND_URL);
     
-    socket.on('connect', () => {
-      console.log('✅ Conexão estabelecida com sucesso. ID do Socket:', socket.id);
-    });
+    // Iniciar conexão do socket
+    ensureSocketConnection()
+      .then(() => {
+        console.log('✅ Conexão estabelecida com sucesso. ID do Socket:', socket.id);
+      })
+      .catch((error) => {
+        console.error('❌ Erro na conexão inicial:', error);
+        setError('Não foi possível conectar ao servidor. Tentando reconectar...');
+      });
 
     socket.on('connect_error', (error) => {
       console.error('❌ Erro na conexão com o servidor:', error);
@@ -56,8 +143,13 @@ const HomePage = () => {
 
     socket.on('roomCreated', (data) => {
       console.log('✅ Nova sala criada:', data);
-      setNewRoomId(data.roomId);
-      setShowCreateRoomModal(true);
+      if (data?.roomId) {
+        setNewRoomId(data.roomId);
+      } else {
+        console.error('❌ Resposta inválida do servidor:', data);
+        setError('Erro ao criar sala: resposta inválida do servidor');
+        setShowCreateRoomModal(false);
+      }
     });
 
     socket.on('activeRooms', (rooms) => {
@@ -80,50 +172,40 @@ const HomePage = () => {
     };
   }, []);
 
-  const handleCreateRoom = () => {
-    console.log('🎲 Iniciando processo de criação de nova sala...');
-    console.log('Estado atual do modal:', { showCreateRoomModal });
-    console.log('Estado do socket:', { 
-      connected: socket.connected,
-      id: socket.id,
-      disconnected: socket.disconnected
-    });
-    
-    // Verificar se o socket está conectado
-    if (!socket.connected) {
-      console.error('❌ Socket não está conectado!');
-      setError('Erro de conexão com o servidor. Por favor, recarregue a página.');
-      return;
-    }
-
-    console.log('✅ Socket conectado, enviando requisição...');
-    
-    try {
-      socket.emit('createRoom', {
-        roomName: 'Nova Sala',
-        userName: 'Host'
-      }, (response) => {
-        console.log('📬 Resposta recebida do servidor:', response);
-        if (response?.error) {
-          console.error('❌ Erro ao criar sala:', response.error);
-          setError(response.error);
-          return;
-        }
-        console.log('✅ Sala criada com sucesso:', response);
-        setNewRoomId(response.roomId);
-        setShowCreateRoomModal(true);
-      });
-    } catch (error) {
-      console.error('❌ Erro ao emitir evento createRoom:', error);
-      setError('Erro ao criar sala. Por favor, tente novamente.');
-    }
-  };
-
   // Adicionar log para monitorar mudanças no estado do modal
   useEffect(() => {
     console.log('Estado do modal atualizado:', { showCreateRoomModal });
     if (showCreateRoomModal) {
-      handleCreateRoom();
+      setIsCreatingRoom(true);
+      setError('');
+      
+      ensureSocketConnection()
+        .then(() => {
+          console.log('✅ Socket conectado, enviando requisição...');
+          return new Promise((resolve, reject) => {
+            socket.emit('createRoom', {
+              roomName: 'Nova Sala',
+              userName: 'Host'
+            }, (response) => {
+              if (response?.error) {
+                reject(new Error(response.error));
+                return;
+              }
+              resolve(response);
+            });
+          });
+        })
+        .then((response) => {
+          console.log('✅ Sala criada com sucesso:', response);
+          setNewRoomId(response.roomId);
+          setIsCreatingRoom(false);
+        })
+        .catch((error) => {
+          console.error('❌ Erro:', error);
+          setError(error.message || 'Erro ao criar sala. Por favor, tente novamente.');
+          setShowCreateRoomModal(false);
+          setIsCreatingRoom(false);
+        });
     }
   }, [showCreateRoomModal]);
 
@@ -181,24 +263,32 @@ const HomePage = () => {
     }
 
     setIsCheckingRoom(true);
-    socket.emit('joinRoom', {
-      roomId: id.trim(),
-      userName: 'Verification'
-    }, (response) => {
-      setIsCheckingRoom(false);
-      if (response?.error) {
-        setError(response.error);
-        setIsRoomActive(false);
-      } else {
-        setError('');
-        setIsRoomActive(true);
-        // Leave the room after verification
-        socket.emit('leaveRoom', {
+    ensureSocketConnection()
+      .then(() => {
+        socket.emit('joinRoom', {
           roomId: id.trim(),
           userName: 'Verification'
+        }, (response) => {
+          setIsCheckingRoom(false);
+          if (response?.error) {
+            setError(response.error);
+            setIsRoomActive(false);
+          } else {
+            setError('');
+            setIsRoomActive(true);
+            // Leave the room after verification
+            socket.emit('leaveRoom', {
+              roomId: id.trim(),
+              userName: 'Verification'
+            });
+          }
         });
-      }
-    });
+      })
+      .catch((error) => {
+        setIsCheckingRoom(false);
+        setError('Erro ao verificar sala: ' + error.message);
+        setIsRoomActive(false);
+      });
   };
 
   const handleJoinRoom = () => {
@@ -350,8 +440,10 @@ const HomePage = () => {
 
       {showCreateRoomModal && (
         <div className="modal-overlay" onClick={() => {
-          console.log('Modal overlay clicado - fechando modal');
-          setShowCreateRoomModal(false);
+          if (!isCreatingRoom) {
+            console.log('Modal overlay clicado - fechando modal');
+            setShowCreateRoomModal(false);
+          }
         }}>
           <div className="room-modal create-room-modal" onClick={e => {
             console.log('Modal clicado - prevenindo propagação');
@@ -359,17 +451,17 @@ const HomePage = () => {
           }}>
             <h2>Nova Sala Criada</h2>
             <div className="room-info">
-              <p>ID da Sala: <strong>{newRoomId || 'Carregando...'}</strong></p>
+              <p>ID da Sala: <strong>{isCreatingRoom ? 'Criando sala...' : (newRoomId || 'Erro')}</strong></p>
               <button 
                 className="copy-link-btn"
                 onClick={handleCopyRoomLink}
-                disabled={!newRoomId}
+                disabled={!newRoomId || isCreatingRoom}
               >
                 <FaCopy /> {copySuccess ? 'ID Copiado!' : 'Copiar ID'}
               </button>
             </div>
             <p className="room-instructions">
-              Compartilhe o ID da sala com sua equipe para que eles possam se juntar à votação.
+              {isCreatingRoom ? 'Criando sua sala...' : 'Compartilhe o ID da sala com sua equipe para que eles possam se juntar à votação.'}
             </p>
             <div className="modal-buttons">
               <button 
@@ -378,19 +470,20 @@ const HomePage = () => {
                   console.log('Botão Cancelar clicado');
                   setShowCreateRoomModal(false);
                 }}
+                disabled={isCreatingRoom}
               >
                 Cancelar
               </button>
               <button 
                 className="join-btn" 
                 onClick={handleStartRoom}
-                disabled={!newRoomId}
+                disabled={!newRoomId || isCreatingRoom}
                 style={{ 
-                  opacity: newRoomId ? 1 : 0.5,
-                  cursor: newRoomId ? 'pointer' : 'not-allowed'
+                  opacity: (newRoomId && !isCreatingRoom) ? 1 : 0.5,
+                  cursor: (newRoomId && !isCreatingRoom) ? 'pointer' : 'not-allowed'
                 }}
               >
-                Iniciar Sala
+                {isCreatingRoom ? 'Criando...' : 'Iniciar Sala'}
               </button>
             </div>
           </div>
