@@ -120,6 +120,9 @@ const HomePage = () => {
   // Adicionar log para monitorar mudanças no estado do modal
   useEffect(() => {
     console.log('Estado do modal atualizado:', { showCreateRoomModal });
+    if (showCreateRoomModal) {
+      handleCreateRoom();
+    }
   }, [showCreateRoomModal]);
 
   const handleCopyRoomLink = () => {
@@ -207,7 +210,7 @@ const HomePage = () => {
               className="start-game-btn large" 
               onClick={() => {
                 console.log('Botão Criar Nova Sala clicado');
-                handleCreateRoom();
+                setShowCreateRoomModal(true);
               }}
             >
               <FaPlus /> Criar Nova Sala
