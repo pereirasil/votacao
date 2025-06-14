@@ -11,18 +11,18 @@ import deloitteLogo from '../assets/deloitte.svg';
 import figmaLogo from '../assets/figma.svg';
 
 // Configurações do ambiente
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const SOCKET_URL = process.env.REACT_APP_SOCKET_URL;
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
 
-// Validação das variáveis de ambiente
-if (!SOCKET_URL) {
-  throw new Error('REACT_APP_SOCKET_URL não está definida no arquivo .env');
-}
+// Parse as origens permitidas do .env
+const DEV_ORIGINS = process.env.REACT_APP_DEV_ORIGINS ? JSON.parse(process.env.REACT_APP_DEV_ORIGINS) : ["http://localhost:3000", "http://localhost:3002"];
+const PROD_ORIGINS = process.env.REACT_APP_PROD_ORIGINS ? JSON.parse(process.env.REACT_APP_PROD_ORIGINS) : ["https://app.timeboard.site"];
 
-if (!BACKEND_URL) {
-  throw new Error('REACT_APP_BACKEND_URL não está definida no arquivo .env');
-}
+// Seleciona as origens baseado no ambiente
+const ALLOWED_ORIGINS = IS_PRODUCTION ? PROD_ORIGINS : DEV_ORIGINS;
+
+// Define as URLs base baseado no ambiente
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (IS_PRODUCTION ? 'https://api.timeboard.site' : 'http://192.168.0.127:3003');
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || (IS_PRODUCTION ? 'https://api.timeboard.site' : 'http://192.168.0.127:3003');
 
 // Log detalhado das configurações
 console.log('🔧 Configurações do ambiente:', {
@@ -30,28 +30,24 @@ console.log('🔧 Configurações do ambiente:', {
   BACKEND_URL,
   SOCKET_URL,
   IS_PRODUCTION,
-  SOCKET_PATH: process.env.REACT_APP_SOCKET_PATH,
-  DEV_ORIGINS: process.env.REACT_APP_DEV_ORIGINS,
-  PROD_ORIGINS: process.env.REACT_APP_PROD_ORIGINS
+  ALLOWED_ORIGINS,
+  SOCKET_PATH: process.env.REACT_APP_SOCKET_PATH
 });
 
 // Configurações do Socket.IO
 const socketConfig = {
   path: process.env.REACT_APP_SOCKET_PATH || '/socket.io/',
-  transports: IS_PRODUCTION ? ['polling', 'websocket'] : ['websocket', 'polling'],
+  transports: IS_PRODUCTION ? ['websocket', 'polling'] : ['websocket', 'polling'],
   secure: IS_PRODUCTION,
-  rejectUnauthorized: false,
+  rejectUnauthorized: IS_PRODUCTION,
   reconnection: true,
   reconnectionAttempts: parseInt(process.env.REACT_APP_SOCKET_RECONNECTION_ATTEMPTS) || 10,
   reconnectionDelay: 1000,
   reconnectionDelayMax: 5000,
   timeout: parseInt(process.env.REACT_APP_SOCKET_TIMEOUT) || 45000,
   autoConnect: false,
-  withCredentials: true,
-  upgrade: true,
-  pingTimeout: parseInt(process.env.REACT_APP_SOCKET_PING_TIMEOUT) || 60000,
-  pingInterval: parseInt(process.env.REACT_APP_SOCKET_PING_INTERVAL) || 25000,
-  upgradeTimeout: parseInt(process.env.REACT_APP_SOCKET_UPGRADE_TIMEOUT) || 10000
+  withCredentials: IS_PRODUCTION,
+  forceNew: true
 };
 
 // Log das configurações do Socket.IO
