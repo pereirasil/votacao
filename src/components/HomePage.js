@@ -37,63 +37,104 @@ console.log('🔧 Configurações do ambiente:', {
 // Configurações do Socket.IO
 const socketConfig = {
   path: process.env.REACT_APP_SOCKET_PATH || '/socket.io/',
-  transports: IS_PRODUCTION ? ['websocket', 'polling'] : ['websocket', 'polling'],
+  transports: ['polling', 'websocket'],
   secure: IS_PRODUCTION,
-  rejectUnauthorized: IS_PRODUCTION,
+  rejectUnauthorized: false,
   reconnection: true,
-  reconnectionAttempts: parseInt(process.env.REACT_APP_SOCKET_RECONNECTION_ATTEMPTS) || 10,
-  reconnectionDelay: 1000,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 3000,
   reconnectionDelayMax: 5000,
-  timeout: parseInt(process.env.REACT_APP_SOCKET_TIMEOUT) || 45000,
+  timeout: 10000,
   autoConnect: false,
-  withCredentials: IS_PRODUCTION,
-  forceNew: true
+  withCredentials: false,
+  forceNew: true,
+  upgrade: true,
+  rememberUpgrade: true,
+  extraHeaders: {
+    'Access-Control-Allow-Origin': '*'
+  },
+  transportOptions: {
+    polling: {
+      extraHeaders: {
+        'Access-Control-Allow-Origin': '*'
+      }
+    }
+  }
 };
 
-// Log das configurações do Socket.IO
-console.log('🔌 Configurações do Socket.IO:', socketConfig);
+// Log das configurações do Socket.IO e ambiente
+console.log('🌍 Ambiente:', process.env.NODE_ENV);
+console.log('🔌 Socket.IO Config:', {
+  ...socketConfig,
+  url: SOCKET_URL,
+  env: process.env.NODE_ENV,
+  origins: ALLOWED_ORIGINS
+});
 
+// Inicializa o socket com debug
 const socket = io(SOCKET_URL, socketConfig);
 
-// Função para garantir conexão do socket
+// Adiciona listeners de debug
+socket.io.on("packet", ({ type, data }) => {
+  console.log('📦 Socket.IO Packet:', { type, data });
+});
+
+socket.io.on("error", (error) => {
+  console.error('❌ Socket.IO Error:', error);
+});
+
+// Função para garantir conexão do socket com retry e mais logs
 const ensureSocketConnection = () => {
   return new Promise((resolve, reject) => {
     if (socket.connected) {
       console.log('✅ Socket já está conectado:', {
         id: socket.id,
-        transport: socket.io.engine?.transport?.name
+        transport: socket.io?.engine?.transport?.name,
+        url: socket.io?.uri
       });
       resolve(socket);
       return;
     }
 
-    console.log('🔄 Tentando conectar ao servidor:', SOCKET_URL);
+    console.log('🔄 Tentando conectar ao servidor:', {
+      url: SOCKET_URL,
+      config: socketConfig
+    });
 
     const timeout = setTimeout(() => {
-      console.error('❌ Timeout ao tentar conectar');
+      console.error('❌ Timeout ao tentar conectar:', {
+        url: SOCKET_URL,
+        state: socket.connected ? 'connected' : 'disconnected',
+        readyState: socket.io?.engine?.readyState
+      });
+      socket.close();
       reject(new Error('Timeout ao conectar ao servidor'));
     }, socketConfig.timeout);
 
-    socket.connect();
-
-    socket.once('connect', () => {
+    socket.on('connect', () => {
       clearTimeout(timeout);
       console.log('✅ Socket conectado:', {
         id: socket.id,
-        transport: socket.io.engine?.transport?.name
+        transport: socket.io?.engine?.transport?.name,
+        url: socket.io?.uri,
+        readyState: socket.io?.engine?.readyState
       });
       resolve(socket);
     });
 
-    socket.once('connected', (data) => {
-      console.log('✅ Conexão confirmada pelo servidor:', data);
-    });
-
-    socket.once('connect_error', (error) => {
+    socket.on('connect_error', (error) => {
+      console.error('❌ Erro de conexão:', {
+        error,
+        url: SOCKET_URL,
+        state: socket.connected ? 'connected' : 'disconnected',
+        readyState: socket.io?.engine?.readyState
+      });
       clearTimeout(timeout);
-      console.error('❌ Erro de conexão:', error);
+      socket.close();
       reject(error);
     });
+
+    socket.connect();
   });
 };
 
