@@ -402,27 +402,29 @@ const Votacao = () => {
         {renderParticipants()}
 
         <div className="voting-area">
-          <div className="table-circle">
-            {users.filter(user => user.name !== 'Host').map((user, index) => (
-              user.name && (
-                <div 
-                  key={user.id || index} 
-                  className="player-slot"
-                >
-                  <img 
-                    src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                    alt={user.name} 
-                    className="player-avatar"
-                  />
-                  <div className={`player-card ${!votesRevealed ? 'face-down' : ''} ${
-                    (user.name === userName && selectedCard) || user.hasVoted ? 'selected' : ''
-                  } ${votesRevealed ? 'revealing' : ''}`}>
-                    {votesRevealed ? revealedVotesData[user.name] || '?' : '?'}
+          <div className={`table-circle ${users.filter(user => user.name !== 'Host').length > 6 ? 'many-players' : ''}`}>
+            {users
+              .filter(user => user.name !== 'Host')
+              .map((user, index) => (
+                user.name && (
+                  <div 
+                    key={user.id || index} 
+                    className="player-slot"
+                  >
+                    <img 
+                      src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                      alt={user.name} 
+                      className="player-avatar"
+                    />
+                    <div className={`player-card ${!votesRevealed ? 'face-down' : ''} ${
+                      (user.name === userName && selectedCard) || user.hasVoted ? 'selected' : ''
+                    }`}>
+                      {votesRevealed ? revealedVotesData[user.name] || '?' : '?'}
+                    </div>
+                    <span className="player-name">{user.name}</span>
                   </div>
-                  <span className="player-name">{user.name}</span>
-                </div>
-              )
-            ))}
+                )
+              ))}
             
             <button
               onClick={votesRevealed ? handleResetVoting : handleRevealVotes}
