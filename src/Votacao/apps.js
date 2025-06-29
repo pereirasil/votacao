@@ -107,12 +107,6 @@ const Votacao = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (votesRevealed) {
-      setShowResults(true);
-    }
-  }, [votesRevealed]);
-
-  useEffect(() => {
     const storedUserName = localStorage.getItem('userName');
     const storedUserRole = localStorage.getItem('userRole');
     const storedUserData = localStorage.getItem('userData');
@@ -169,6 +163,7 @@ const Votacao = () => {
     socket.on('votesRevealed', (data) => {
       console.log('👀 Votos revelados - dados brutos:', data);
       setVotesRevealed(true);
+      setShowResults(true);
       const votesMap = {};
       let sum = 0;
       let count = 0;
@@ -253,29 +248,13 @@ const Votacao = () => {
   };
 
   const handleRevealVotes = () => {
-    ensureSocketConnection()
-      .then(() => {
-        socket.emit('revealVotes', roomId);
-      })
-      .catch((error) => {
-        console.error('❌ Erro ao revelar votos:', error);
-        alert('Erro ao revelar votos. Por favor, tente novamente.');
-      });
+    if (!socket || !roomId) return;
+    socket.emit('revealVotes', roomId);
   };
 
   const handleResetVoting = () => {
-    ensureSocketConnection()
-      .then(() => {
-        socket.emit('resetVoting', roomId);
-        setSelectedCard(null);
-        setVotesRevealed(false);
-        setRevealedVotesData({});
-        setAverageVote(null);
-      })
-      .catch((error) => {
-        console.error('❌ Erro ao resetar votação:', error);
-        alert('Erro ao resetar votação. Por favor, tente novamente.');
-      });
+    if (!socket || !roomId) return;
+    socket.emit('resetVoting', roomId);
   };
 
   const handleLogout = () => {
@@ -477,23 +456,13 @@ const Votacao = () => {
         </div>
 
         {votesRevealed && revealedVotesData && Object.keys(revealedVotesData).length > 0 && showResults && (
-          <div className="results-modal" onClick={handleCloseResults}>
+          <div className={`results-modal ${showResults ? 'show' : ''}`} onClick={handleCloseResults}>
             <div className="results-content" onClick={e => e.stopPropagation()}>
               <button className="close-results" onClick={handleCloseResults}>×</button>
               <h2>Resultado da Votação</h2>
-              <div className="results-summary">
-                <div className="average-vote">
-                  <span className="label">Média:</span>
-                  <span className="value">{averageVote}</span>
-                </div>
-                <div className="votes-breakdown">
-                  {Object.entries(revealedVotesData || {}).map(([name, vote]) => (
-                    <div key={name} className="vote-item">
-                      <span className="voter-name">{name}:</span>
-                      <span className="voter-vote">{vote}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="average-vote">
+                <span className="label">Média:</span>
+                <span className="value">{averageVote}</span>
               </div>
             </div>
           </div>
