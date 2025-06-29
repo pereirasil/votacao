@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope } from 'react-icons/fa';
+import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope, FaChevronRight, FaChevronLeft, FaUsers, FaBars } from 'react-icons/fa';
 import io from 'socket.io-client';
 import './style.css';
 
@@ -103,6 +103,8 @@ const Votacao = () => {
   const [userAvatar, setUserAvatar] = useState(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [participantsListExpanded, setParticipantsListExpanded] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     if (votesRevealed) {
@@ -354,53 +356,76 @@ const Votacao = () => {
     window.open(gmailUrl, '_blank');
   };
 
-  const renderParticipants = () => {
+  const toggleParticipantsList = () => {
+    setParticipantsListExpanded(!participantsListExpanded);
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const renderVerticalMenu = () => {
     const filteredUsers = users.filter(user => user.name !== 'Host');
+    
     return (
-      <div className="participants">
-        <h2>Participantes ({filteredUsers.length})</h2>
-        <div className="users-list">
-          {filteredUsers.map((user, index) => (
-            user.name && (
-              <div key={user.id || index} className="user-item">
-                <img
-                  src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                  alt={user.name}
-                  className="user-avatar"
-                />
-                <span>{user.name}</span>
-              </div>
-            )
-          ))}
+      <>
+        <div className={`vertical-menu ${isMobileMenuOpen ? 'mobile-expanded' : ''}`}>
+          <div className="menu-user-info">
+            <img
+              src={userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`}
+              alt={userName}
+              className="user-avatar"
+            />
+            <div className="user-details">
+              <h3>{userName}</h3>
+              <p>{userRole === 'moderator' ? 'Moderador' : 'Participante'}</p>
+            </div>
+          </div>
+
+          <div className="participants-counter" onClick={toggleParticipantsList}>
+            <div className="counter-icon">
+              <FaUsers />
+            </div>
+            <div className="counter-details">
+              <h3>Participantes</h3>
+              <p>{filteredUsers.length} online</p>
+            </div>
+          </div>
+
+          <div className={`participants-list ${participantsListExpanded ? 'expanded' : ''}`}>
+            {filteredUsers.map((user, index) => (
+              user.name && (
+                <div key={user.id || index} className="participant-item">
+                  <img
+                    src={user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                    alt={user.name}
+                    className="participant-avatar"
+                  />
+                  <span className="participant-name">{user.name}</span>
+                </div>
+              )
+            ))}
+          </div>
+
+          <button onClick={handleLogout} className="menu-logout">
+            <div className="logout-icon">
+              <FaSignOutAlt />
+            </div>
+            <span className="logout-text">Sair da Sala</span>
+          </button>
         </div>
-      </div>
+        <div className={`menu-overlay ${isMobileMenuOpen ? 'show' : ''}`} onClick={() => setIsMobileMenuOpen(false)} />
+      </>
     );
   };
 
   return (
     <div className="Votacao">
+      {renderVerticalMenu()}
+      <button className="fab-menu-button" onClick={toggleMobileMenu}>
+        <FaBars />
+      </button>
       <div className="container">
-        <div className="header">
-          <div className="user-profile">
-            {userAvatar && (
-              <img 
-                src={userAvatar} 
-                alt={userName} 
-                className="user-avatar"
-              />
-            )}
-            <div className="user-details">
-              <h2>{userName}</h2>
-              <p>Função: {userRole === 'moderator' ? 'Moderador' : 'Participante'}</p>
-            </div>
-          </div>
-          <button onClick={handleLogout} className="logout-button">
-            <FaSignOutAlt /> Sair
-          </button>
-        </div>
-
-        {renderParticipants()}
-
         <div className="voting-area">
           <div className="table-circle">
             {users.filter(user => user.name !== 'Host').map((user, index) => (
