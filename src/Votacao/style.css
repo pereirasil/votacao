@@ -1212,6 +1212,14 @@
     width: 280px;
   }
 
+  .vertical-menu.mobile-expanded .menu-user-info .user-details,
+  .vertical-menu.mobile-expanded .participants-counter .counter-details,
+  .vertical-menu.mobile-expanded .participant-item .participant-name,
+  .vertical-menu.mobile-expanded .menu-share .share-text,
+  .vertical-menu.mobile-expanded .menu-logout .logout-text {
+    opacity: 1;
+  }
+
   .menu-user-info {
     margin-top: 60px;
   }
