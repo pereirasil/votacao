@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope, FaChevronRight, FaChevronLeft, FaUsers, FaBars } from 'react-icons/fa';
+import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope, FaChevronRight, FaChevronLeft, FaUsers, FaBars, FaShare } from 'react-icons/fa';
 import io from 'socket.io-client';
 import './style.css';
 
@@ -406,6 +406,13 @@ const Votacao = () => {
               )
             ))}
           </div>
+
+          <button onClick={handleShareModal} className="menu-share">
+            <div className="share-icon">
+              <FaShare />
+            </div>
+            <span className="share-text">Compartilhar Sala</span>
+          </button>
 
           <button onClick={handleLogout} className="menu-logout">
             <div className="logout-icon">
