@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope, FaChevronRight, FaChevronLeft, FaUsers, FaBars, FaShare } from 'react-icons/fa';
+import { FaWhatsapp, FaTelegramPlane, FaSignOutAlt, FaCopy, FaEnvelope, FaChevronRight, FaChevronLeft, FaUsers, FaBars, FaShare, FaComments, FaMinus, FaExpand } from 'react-icons/fa';
 import io from 'socket.io-client';
 import './style.css';
 
@@ -105,6 +105,17 @@ const Votacao = () => {
   const [copySuccess, setCopySuccess] = useState(false);
   const [participantsListExpanded, setParticipantsListExpanded] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [isChatMinimized, setIsChatMinimized] = useState(false);
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     const storedUserName = localStorage.getItem('userName');
@@ -218,6 +229,14 @@ const Votacao = () => {
       }
     });
 
+    socket.on('newChatMessage', (message) => {
+      setMessages(prev => [...prev, message]);
+    });
+
+    socket.on('chatHistory', (history) => {
+      setMessages(history);
+    });
+
     const timeInterval = setInterval(() => {
       // setCurrentTime(new Date());
     }, 1000);
@@ -226,6 +245,8 @@ const Votacao = () => {
       socket.emit('leaveRoom', roomId);
       socket.disconnect();
       clearInterval(timeInterval);
+      socket.off('newChatMessage');
+      socket.off('chatHistory');
     };
   }, [roomId, navigate]);
 
@@ -343,6 +364,91 @@ const Votacao = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
+  const handleSendMessage = (message) => {
+    if (!socket || !roomId || !message.trim()) return;
+    
+    // Encontra o avatar do usuário atual na lista de jogadores
+    const currentUser = users.find(user => user.name === userName);
+    const userAvatar = currentUser ? currentUser.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${userName}`;
+    
+    const messageData = {
+      roomId,
+      userName,
+      message: message.trim(),
+      avatar: userAvatar,
+      timestamp: new Date()
+    };
+    
+    socket.emit('chatMessage', messageData);
+  };
+
+  const ChatComponent = () => {
+    const [newMessage, setNewMessage] = useState('');
+  
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      if (newMessage.trim()) {
+        handleSendMessage(newMessage);
+        setNewMessage('');
+      }
+    };
+  
+    return (
+      <div className={`chat-area ${isChatMinimized ? 'chat-minimized' : ''}`}>
+        <div className="chat-header">
+          <h3><FaComments /> Chat da Sala</h3>
+          <button 
+            className="chat-toggle"
+            onClick={() => setIsChatMinimized(!isChatMinimized)}
+          >
+            {isChatMinimized ? <FaExpand /> : <FaMinus />}
+          </button>
+        </div>
+        
+        <div className="messages-container">
+          {messages.map((msg, index) => {
+            // Encontra o avatar do usuário da mensagem na lista de jogadores
+            const messageUser = users.find(user => user.name === msg.userName);
+            const messageAvatar = messageUser ? messageUser.avatar : `https://api.dicebear.com/7.x/avataaars/svg?seed=${msg.userName}`;
+            
+            return (
+              <div 
+                key={index}
+                className={`message ${msg.userName === userName ? 'mine' : ''}`}
+              >
+                <img 
+                  src={messageAvatar}
+                  alt={msg.userName}
+                  className="message-avatar"
+                />
+                <div className="message-content">
+                  <div className="message-header">
+                    <span className="message-user">{msg.userName}</span>
+                    <span className="message-time">
+                      {new Date(msg.timestamp).toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <div className="message-text">{msg.message}</div>
+                </div>
+              </div>
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
+        
+        <form onSubmit={handleSubmit} className="message-input">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Digite sua mensagem..."
+          />
+          <button type="submit">Enviar</button>
+        </form>
+      </div>
+    );
+  };
+
   const renderVerticalMenu = () => {
     const filteredUsers = users.filter(user => user.name !== 'Host');
     
@@ -413,7 +519,7 @@ const Votacao = () => {
       </button>
       <div className="container">
         <div className="voting-area">
-          <div className="table-circle">
+          <div className={`table-circle ${users.filter(user => user.name !== 'Host').length > 6 ? 'square-table' : ''}`}>
             {users.filter(user => user.name !== 'Host').map((user, index) => (
               user.name && (
                 <div 
@@ -467,55 +573,8 @@ const Votacao = () => {
             </div>
           </div>
         )}
-
-        <div className="share-container">
-          <button onClick={handleShareModal} className="share-button">
-            <FaCopy /> Compartilhar Sala
-          </button>
-        </div>
-
-        {showShareModal && (
-          <div className="modal-overlay" onClick={handleCloseShareModal}>
-            <div className="share-modal" onClick={e => e.stopPropagation()}>
-              <button className="close-modal" onClick={handleCloseShareModal}>×</button>
-              <h2>Compartilhar Sala</h2>
-              <p style={{ textAlign: 'center', marginBottom: '20px', color: '#666' }}>
-                Escolha uma das opções abaixo para compartilhar o link da sala com seus colegas
-              </p>
-              <div className="share-options">
-                <button 
-                  className="share-option whatsapp"
-                  onClick={() => window.open(`https://wa.me/?text=Entre na votação: ${window.location.origin}/login?roomId=${roomId}`, '_blank')}
-                >
-                  <FaWhatsapp size={32} />
-                  <span>WhatsApp</span>
-                </button>
-                <button 
-                  className="share-option telegram"
-                  onClick={() => window.open(`https://t.me/share/url?url=${window.location.origin}/login?roomId=${roomId}`, '_blank')}
-                >
-                  <FaTelegramPlane size={32} />
-                  <span>Telegram</span>
-                </button>
-                <button 
-                  className="share-option email"
-                  onClick={handleEmailShare}
-                >
-                  <FaEnvelope size={32} />
-                  <span>Email</span>
-                </button>
-                <button 
-                  className="share-option copy"
-                  onClick={handleCopyLink}
-                >
-                  <FaCopy size={32} />
-                  <span>{copySuccess ? 'Link Copiado!' : 'Copiar Link'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+      <ChatComponent />
     </div>
   );
 };
