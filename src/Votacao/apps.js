@@ -573,6 +573,41 @@ const Votacao = () => {
             </div>
           </div>
         )}
+
+        {showShareModal && (
+          <div className="modal-overlay" onClick={handleCloseShareModal}>
+            <div className="share-modal" onClick={e => e.stopPropagation()}>
+              <button className="close-modal" onClick={handleCloseShareModal}>×</button>
+              <h2>Compartilhar Sala</h2>
+              <div className="share-options">
+                <button 
+                  className="share-button whatsapp"
+                  onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(`Entre na votação: ${window.location.origin}/login?roomId=${roomId}`)}`, '_blank')}
+                >
+                  <FaWhatsapp /> WhatsApp
+                </button>
+                <button 
+                  className="share-button telegram"
+                  onClick={() => window.open(`https://t.me/share/url?url=${encodeURIComponent(`${window.location.origin}/login?roomId=${roomId}`)}&text=${encodeURIComponent('Entre na votação')}`, '_blank')}
+                >
+                  <FaTelegramPlane /> Telegram
+                </button>
+                <button 
+                  className="share-button email"
+                  onClick={handleEmailShare}
+                >
+                  <FaEnvelope /> Email
+                </button>
+                <button 
+                  className="share-button copy"
+                  onClick={handleCopyLink}
+                >
+                  <FaCopy /> {copySuccess ? 'Copiado!' : 'Copiar Link'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       <ChatComponent />
     </div>

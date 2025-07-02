@@ -796,109 +796,90 @@
 
 .share-modal {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
+  padding: 30px;
+  border-radius: 15px;
   width: 90%;
   max-width: 400px;
   position: relative;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+}
+
+.share-modal h2 {
+  color: #006B5B;
+  margin-bottom: 20px;
+  text-align: center;
 }
 
 .close-modal {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 10px;
+  right: 10px;
   background: none;
   border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
+  font-size: 24px;
   color: #666;
-  padding: 0.5rem;
-  line-height: 1;
+  cursor: pointer;
+  padding: 5px;
 }
 
-.share-modal h2 {
-  margin: 0 0 1.5rem;
+.close-modal:hover {
   color: #333;
-  text-align: center;
-  font-size: 1.5rem;
 }
 
 .share-options {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.share-option {
   display: flex;
   flex-direction: column;
+  gap: 15px;
+}
+
+.share-button {
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  gap: 10px;
+  padding: 12px;
   border: none;
   border-radius: 8px;
+  font-size: 16px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: #f8f9fa;
-  color: #333;
-}
-
-.share-option:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.share-option span {
-  margin-top: 0.5rem;
-  font-size: 0.9rem;
-}
-
-.share-option.whatsapp {
-  background: #25D366;
   color: white;
 }
 
-.share-option.telegram {
-  background: #0088cc;
-  color: white;
+.share-button.whatsapp {
+  background-color: #25D366;
 }
 
-.share-option.email {
-  background: #EA4335;
-  color: white;
+.share-button.whatsapp:hover {
+  background-color: #1da851;
 }
 
-.share-option.copy {
-  background: #6c757d;
-  color: white;
+.share-button.telegram {
+  background-color: #0088cc;
 }
 
-.share-option.whatsapp:hover {
-  background: #128C7E;
+.share-button.telegram:hover {
+  background-color: #006699;
 }
 
-.share-option.telegram:hover {
-  background: #0077B5;
+.share-button.email {
+  background-color: #006B5B;
 }
 
-.share-option.email:hover {
-  background: #D33426;
+.share-button.email:hover {
+  background-color: #005347;
 }
 
-.share-option.copy:hover {
-  background: #5a6268;
+.share-button.copy {
+  background-color: #666;
 }
 
-@media (max-width: 480px) {
-  .share-options {
-    grid-template-columns: 1fr;
-  }
-  
-  .share-modal {
-    width: 95%;
-    padding: 1.5rem;
-  }
+.share-button.copy:hover {
+  background-color: #555;
+}
+
+.share-button svg {
+  font-size: 20px;
 }
 
 .vertical-menu {
