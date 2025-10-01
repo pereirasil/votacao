@@ -1337,3 +1337,262 @@
     border-width: 1.5px;
   }
 }
+
+/* Estilos para o Sprint */
+.menu-sprint {
+  background: #2196F3;
+  color: white;
+  border: none;
+  padding: 15px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.menu-sprint:hover {
+  background: #1976D2;
+  transform: translateY(-2px);
+}
+
+.sprint-icon {
+  font-size: 18px;
+}
+
+.sprint-text {
+  font-weight: 600;
+}
+
+/* Estilos para o botão Trello */
+.menu-trello {
+  background: #0079bf;
+  color: white;
+  border: none;
+  padding: 15px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  margin: 10px 0;
+}
+
+.menu-trello:hover {
+  background: #005a8b;
+  transform: translateY(-2px);
+}
+
+.trello-icon {
+  font-size: 18px;
+}
+
+.trello-text {
+  font-weight: 600;
+}
+
+/* Estilos para a tarefa selecionada */
+.selected-task-display {
+  background: white;
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-left: 5px solid #4CAF50;
+}
+
+.task-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.task-icon {
+  color: #4CAF50;
+  font-size: 20px;
+}
+
+.task-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+}
+
+.task-content h4 {
+  margin: 0 0 10px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.task-content p {
+  margin: 0 0 15px 0;
+  color: #666;
+  line-height: 1.5;
+}
+
+.task-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.priority {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.priority-alta {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.priority-média {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.priority-baixa {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.status-em-progresso {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.status-pendente {
+  background: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.status-concluído {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+/* Estilos para o modal do Sprint */
+.sprint-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.sprint-modal h2 {
+  margin: 0 0 20px 0;
+  color: #333;
+  text-align: center;
+  font-size: 1.8rem;
+}
+
+.sprint-tasks h3 {
+  margin: 0 0 20px 0;
+  color: #555;
+  font-size: 1.2rem;
+}
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.task-item {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.task-item:hover {
+  background: #e3f2fd;
+  border-color: #2196F3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.2);
+}
+
+.task-info h4 {
+  margin: 0 0 8px 0;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.task-info p {
+  margin: 0 0 15px 0;
+  color: #666;
+  line-height: 1.4;
+}
+
+.task-item .task-meta {
+  margin-top: 10px;
+}
+
+/* Estilos para sprint vazio */
+.empty-sprint {
+  text-align: center;
+  padding: 40px 20px;
+  color: #666;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  color: #ccc;
+  margin-bottom: 20px;
+}
+
+.empty-sprint h3 {
+  margin: 0 0 15px 0;
+  color: #555;
+  font-size: 1.5rem;
+}
+
+.empty-sprint p {
+  margin: 0 0 10px 0;
+  line-height: 1.5;
+}
+
+/* Responsividade para Sprint */
+@media (max-width: 768px) {
+  .selected-task-display {
+    margin: 10px;
+    padding: 15px;
+  }
+  
+  .sprint-modal {
+    width: 95%;
+    padding: 20px;
+  }
+  
+  .task-item {
+    padding: 15px;
+  }
+  
+  .task-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+}

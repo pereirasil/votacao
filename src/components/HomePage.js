@@ -360,8 +360,8 @@ const HomePage = () => {
           <button className="theme-toggle" aria-label="Alternar tema">
             <FaMoon />
           </button>
-          <button className="start-game-btn" onClick={() => setShowRoomModal(true)}>
-            Iniciar jogo
+          <button className="start-game-btn" onClick={() => navigate('/dashboard')}>
+            Trello
           </button>
         </nav>
       </header>
