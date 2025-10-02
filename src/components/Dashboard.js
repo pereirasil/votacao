@@ -41,6 +41,8 @@ const Dashboard = () => {
   const [showTaskFilter, setShowTaskFilter] = useState(false);
   const [taskFilterType, setTaskFilterType] = useState('');
   const [filteredTasks, setFilteredTasks] = useState([]);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -265,70 +267,151 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
-      <header className="dashboard-header">
-        <div className="header-left">
-          
-          <nav className="main-nav">
-            <button 
-              className={`nav-item ${viewMode === 'kanban' ? 'active' : ''}`}
-              onClick={() => setViewMode('kanban')}
-            >
-              <FaColumns /> Controle de Tarefas
-            </button>
-            <button 
-              className={`nav-item ${viewMode === 'boards' ? 'active' : ''}`}
-              onClick={() => setViewMode('boards')}
-            >
-              <FaTrello /> Quadros
-            </button>
-            <button 
-              className={`nav-item ${viewMode === 'list' ? 'active' : ''}`}
-              onClick={() => setViewMode('list')}
-            >
-              <FaList /> Lista
-            </button>
-          </nav>
-        </div>
-
-        <div className="header-center">
-          <div className="search-container">
-            <FaSearch className="search-icon" />
-            <input
-              type="text"
-              placeholder="Buscar quadros..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
-          </div>
-        </div>
-
-        <div className="header-right">
-          <button className="header-btn">
-            <FaBell />
-          </button>
-          <div className="user-menu">
-            <div className="user-info">
-              <FaUser className="user-avatar" />
-              <span className="user-name">{user?.name}</span>
+      {/* Top Navigation Bar */}
+      <header className="top-navbar">
+        <div className="navbar-container">
+          {/* Left Section - Logo & Navigation */}
+          <div className="navbar-left">
+            <div className="logo-section">
+              <div className="logo-icon">
+                <FaTrello />
+              </div>
+              <span className="logo-text">TimeBoard</span>
             </div>
-            <div className="user-dropdown">
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="mobile-menu-toggle"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              <span className={`hamburger ${isMobileMenuOpen ? 'active' : ''}`}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </span>
+            </button>
+            
+            <nav className={`navbar-nav ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
               <button 
-                className="dropdown-item"
-                onClick={() => setShowProfileModal(true)}
+                className={`nav-link ${viewMode === 'kanban' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('kanban');
+                  setIsMobileMenuOpen(false);
+                }}
               >
-                <FaUser /> Perfil
+                <FaColumns />
+                <span>Controle de Tarefas</span>
               </button>
               <button 
-                className="dropdown-item"
-                onClick={() => navigate('/settings')}
+                className={`nav-link ${viewMode === 'boards' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('boards');
+                  setIsMobileMenuOpen(false);
+                }}
               >
-                <FaCog /> Configurações
+                <FaTrello />
+                <span>Quadros</span>
               </button>
-              <button className="dropdown-item" onClick={handleLogout}>
-                <FaSignOutAlt /> Sair
+              <button 
+                className={`nav-link ${viewMode === 'list' ? 'active' : ''}`}
+                onClick={() => {
+                  setViewMode('list');
+                  setIsMobileMenuOpen(false);
+                }}
+              >
+                <FaList />
+                <span>Lista</span>
               </button>
+            </nav>
+          </div>
+
+          {/* Center Section - Search */}
+          <div className={`navbar-center ${isSearchFocused ? 'focused' : ''}`}>
+            <div className="search-wrapper">
+              <FaSearch className="search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar quadros, tarefas..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                className="search-input"
+              />
+              {searchTerm && (
+                <button 
+                  className="search-clear"
+                  onClick={() => setSearchTerm('')}
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Right Section - Actions & Profile */}
+          <div className="navbar-right">
+            <button className="action-btn notifications-btn">
+              <FaBell />
+              <span className="notification-badge">3</span>
+            </button>
+            
+            <div className="user-profile">
+              <div className="profile-trigger">
+                <div className="profile-avatar">
+                  <FaUser />
+                </div>
+                <div className="profile-info">
+                  <span className="profile-name">{user?.name}</span>
+                  <span className="profile-role">Membro</span>
+                </div>
+                <div className="profile-arrow">▼</div>
+              </div>
+              
+              <div className="profile-dropdown">
+                <div className="dropdown-header">
+                  <div className="dropdown-avatar">
+                    <FaUser />
+                  </div>
+                  <div className="dropdown-info">
+                    <span className="dropdown-name">{user?.name}</span>
+                    <span className="dropdown-email">{user?.email}</span>
+                  </div>
+                </div>
+                
+                <div className="dropdown-divider"></div>
+                
+                <button 
+                  className="dropdown-action"
+                  onClick={() => {
+                    setShowProfileModal(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <FaUser />
+                  <span>Meu Perfil</span>
+                </button>
+                <button 
+                  className="dropdown-action"
+                  onClick={() => {
+                    navigate('/settings');
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <FaCog />
+                  <span>Configurações</span>
+                </button>
+                
+                <div className="dropdown-divider"></div>
+                
+                <button 
+                  className="dropdown-action logout"
+                  onClick={handleLogout}
+                >
+                  <FaSignOutAlt />
+                  <span>Sair</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

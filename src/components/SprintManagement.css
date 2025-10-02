@@ -271,8 +271,14 @@
   align-items: flex-start;
 }
 
+.sprint-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .sprint-title h3 {
-  margin: 0 0 8px 0;
+  margin: 0;
   font-size: 18px;
   font-weight: 600;
   color: #333;
