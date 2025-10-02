@@ -378,12 +378,12 @@ const MyTasks = () => {
                     <div className="sprint-progress">
                       <div className="progress-header">
                         <span>Progresso da Sprint</span>
-                        <span>{sprint.progresso.toFixed(1)}%</span>
+                        <span>{Number(sprint.progresso || 0).toFixed(1)}%</span>
                       </div>
                       <div className="progress-bar">
                         <div 
                           className="progress-fill"
-                          style={{ width: `${sprint.progresso}%` }}
+                          style={{ width: `${Number(sprint.progresso || 0)}%` }}
                         ></div>
                       </div>
                     </div>
@@ -415,11 +415,11 @@ const MyTasks = () => {
                         <div className="progress-bar">
                           <div 
                             className="progress-fill" 
-                            style={{ width: `${sprint.progresso || 0}%` }}
+                            style={{ width: `${Number(sprint.progresso || 0)}%` }}
                           ></div>
                         </div>
                         <div className="progress-text">
-                          {sprint.progresso || 0}% concluído
+                          {Number(sprint.progresso || 0).toFixed(1)}% concluído
                         </div>
                       </div>
                     </div>
