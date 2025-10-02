@@ -8,6 +8,8 @@ import AvatarSelection from './components/AvatarSelection';
 import MemberManagement from './components/MemberManagement';
 import Settings from './components/Settings';
 import SprintManagement from './components/SprintManagement';
+import SprintTasksView from './components/SprintTasksView';
+import SprintKanbanBoard from './components/SprintKanbanBoard';
 import MyTasks from './components/MyTasks';
 import AdminDashboard from './components/AdminDashboard';
 import Votacao from './Votacao/apps';
@@ -107,6 +109,16 @@ const AppRoutes = () => {
         <Route path="/sprints" element={
           <PrivateRoute>
             <SprintManagement />
+          </PrivateRoute>
+        } />
+        <Route path="/sprint/:sprintId/tasks" element={
+          <PrivateRoute>
+            <SprintTasksView />
+          </PrivateRoute>
+        } />
+        <Route path="/sprint/:sprintId/board" element={
+          <PrivateRoute>
+            <SprintKanbanBoard />
           </PrivateRoute>
         } />
         <Route path="/my-tasks" element={

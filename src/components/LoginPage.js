@@ -81,10 +81,15 @@ const LoginPage = () => {
           console.log('🔐 isAuthenticated após login:', isAuth);
           
           if (isAuth) {
-            // Redirecionar baseado no contexto
+            const user = authService.getCurrentUser();
+            const role = (user?.role || '').toLowerCase();
+            // Redirecionar baseado no contexto e role
             if (roomId) {
               console.log('🔄 Redirecionando para seleção de avatar:', roomId);
               navigate(`/avatar?roomId=${roomId}`, { replace: true });
+            } else if (role === 'admin' || role === 'manager' || role === 'gestor') {
+              console.log('🔄 Redirecionando para AdminDashboard');
+              navigate('/admin-dashboard', { replace: true });
             } else {
               console.log('🔄 Redirecionando para dashboard');
               navigate('/dashboard', { replace: true });

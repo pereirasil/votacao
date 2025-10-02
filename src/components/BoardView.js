@@ -473,7 +473,7 @@ const BoardView = () => {
 
   const handleCreateCard = async (listId, cardData) => {
     try {
-      const result = await BoardService.createCard(listId, cardData);
+      const result = await BoardService.createCard(boardId, listId, cardData);
       if (result.success) {
         setLists(prev => prev.map(list => 
           list.id === listId 

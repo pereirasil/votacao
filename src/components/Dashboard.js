@@ -85,126 +85,20 @@ const Dashboard = () => {
   const loadBoards = async (currentUser) => {
     try {
       setIsLoading(true);
-      console.log('📋 Carregando boards (MOCK)...');
+      console.log('📋 Carregando boards (API real)...');
       console.log('👤 Usuário atual na função loadBoards:', currentUser);
-      
-      // Dados mock para visualização
-      const mockBoards = [
-        {
-          id: 1,
-          title: 'Projeto Principal',
-          description: 'Quadro principal do projeto de desenvolvimento',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          is_public: false,
-          user_id: currentUser?.id,
-          lists: [
-            { id: 1, title: 'To Do', position: 1, cards: [
-              { id: 1, title: 'Implementar autenticação', description: 'Criar sistema de login seguro', priority: 'high', due_date: '2024-01-15' },
-              { id: 2, title: 'Configurar banco de dados', description: 'Setup inicial do PostgreSQL', priority: 'medium', due_date: '2024-01-20' }
-            ]},
-            { id: 2, title: 'In Progress', position: 2, cards: [
-              { id: 3, title: 'Criar dashboard', description: 'Interface principal do sistema', priority: 'high', due_date: '2024-01-18' }
-            ]},
-            { id: 3, title: 'Done', position: 3, cards: [
-              { id: 4, title: 'Setup do projeto', description: 'Configuração inicial do ambiente', priority: 'low', due_date: '2024-01-10' }
-            ]}
-          ],
-          members: [
-            { id: 1, user: { name: currentUser?.name, email: currentUser?.email }, role: 'owner' },
-            { id: 2, user: { name: 'João Silva', email: 'joao@email.com' }, role: 'admin' },
-            { id: 3, user: { name: 'Maria Santos', email: 'maria@email.com' }, role: 'member' }
-          ]
-        },
-        {
-          id: 2,
-          title: 'Backlog de Funcionalidades',
-          description: 'Lista de funcionalidades pendentes para implementação',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          updated_at: new Date(Date.now() - 3600000).toISOString(),
-          is_public: true,
-          user_id: currentUser?.id,
-          lists: [
-            { id: 4, title: 'Ideias', position: 1, cards: [
-              { id: 5, title: 'Sistema de notificações', description: 'Push notifications para mobile', priority: 'medium', due_date: '2024-02-01' },
-              { id: 6, title: 'Relatórios avançados', description: 'Dashboard com métricas detalhadas', priority: 'low', due_date: '2024-02-15' }
-            ]},
-            { id: 5, title: 'Prioritário', position: 2, cards: [
-              { id: 7, title: 'Integração com API externa', description: 'Conectar com serviços de terceiros', priority: 'high', due_date: '2024-01-25' }
-            ]}
-          ],
-          members: [
-            { id: 4, user: { name: currentUser?.name, email: currentUser?.email }, role: 'owner' },
-            { id: 5, user: { name: 'Pedro Costa', email: 'pedro@email.com' }, role: 'member' }
-          ]
-        },
-        {
-          id: 3,
-          title: 'Sprint Atual',
-          description: 'Tarefas do sprint atual em desenvolvimento',
-          created_at: new Date(Date.now() - 172800000).toISOString(),
-          updated_at: new Date(Date.now() - 7200000).toISOString(),
-          is_public: false,
-          user_id: currentUser?.id,
-          lists: [
-            { id: 6, title: 'Sprint Backlog', position: 1, cards: [
-              { id: 8, title: 'Refatorar código legado', description: 'Melhorar qualidade do código existente', priority: 'high', due_date: '2024-01-30' },
-              { id: 9, title: 'Implementar testes unitários', description: 'Aumentar cobertura de testes', priority: 'medium', due_date: '2024-02-05' }
-            ]},
-            { id: 7, title: 'Em Desenvolvimento', position: 2, cards: [
-              { id: 10, title: 'Nova funcionalidade de busca', description: 'Sistema de busca avançada', priority: 'high', due_date: '2024-01-28' }
-            ]},
-            { id: 8, title: 'Review', position: 3, cards: [
-              { id: 11, title: 'Otimização de performance', description: 'Melhorar velocidade da aplicação', priority: 'medium', due_date: '2024-01-22' }
-            ]},
-            { id: 9, title: 'Concluído', position: 4, cards: [
-              { id: 12, title: 'Correção de bugs críticos', description: 'Resolver problemas de segurança', priority: 'high', due_date: '2024-01-15' }
-            ]}
-          ],
-          members: [
-            { id: 6, user: { name: currentUser?.name, email: currentUser?.email }, role: 'owner' },
-            { id: 7, user: { name: 'Ana Lima', email: 'ana@email.com' }, role: 'admin' },
-            { id: 8, user: { name: 'Carlos Oliveira', email: 'carlos@email.com' }, role: 'member' },
-            { id: 9, user: { name: 'Fernanda Rocha', email: 'fernanda@email.com' }, role: 'member' },
-            { id: 10, user: { name: 'Roberto Alves', email: 'roberto@email.com' }, role: 'member' }
-          ]
-        },
-        {
-          id: 4,
-          title: 'Bugs e Melhorias',
-          description: 'Quadro para reportar e corrigir bugs',
-          created_at: new Date(Date.now() - 259200000).toISOString(),
-          updated_at: new Date(Date.now() - 10800000).toISOString(),
-          is_public: true,
-          user_id: currentUser?.id,
-          lists: [
-            { id: 10, title: 'Bugs Críticos', position: 1, cards: [
-              { id: 13, title: 'Erro de login em produção', description: 'Usuários não conseguem fazer login', priority: 'high', due_date: '2024-01-20' },
-              { id: 14, title: 'Vazamento de dados', description: 'Informações sensíveis sendo expostas', priority: 'high', due_date: '2024-01-18' }
-            ]},
-            { id: 11, title: 'Bugs Menores', position: 2, cards: [
-              { id: 15, title: 'Layout quebrado no mobile', description: 'Interface não responsiva em alguns dispositivos', priority: 'medium', due_date: '2024-01-25' }
-            ]},
-            { id: 12, title: 'Melhorias', position: 3, cards: [
-              { id: 16, title: 'Adicionar tema escuro', description: 'Implementar modo escuro na interface', priority: 'low', due_date: '2024-02-10' },
-              { id: 17, title: 'Melhorar UX do formulário', description: 'Simplificar processo de cadastro', priority: 'medium', due_date: '2024-02-01' }
-            ]}
-          ],
-          members: [
-            { id: 11, user: { name: currentUser?.name, email: currentUser?.email }, role: 'owner' },
-            { id: 12, user: { name: 'Lucas Ferreira', email: 'lucas@email.com' }, role: 'admin' },
-            { id: 13, user: { name: 'Juliana Martins', email: 'juliana@email.com' }, role: 'member' },
-            { id: 14, user: { name: 'Diego Souza', email: 'diego@email.com' }, role: 'member' }
-          ]
-        }
-      ];
-      
-      setBoards(mockBoards);
-      console.log('✅ Boards carregados com sucesso (MOCK):', mockBoards);
-      
+      const result = await BoardService.getBoards();
+      if (result.success) {
+        setBoards(result.boards || []);
+        console.log('✅ Boards carregados com sucesso (API):', result.boards?.length || 0);
+      } else {
+        setError(result.error || 'Erro ao carregar quadros');
+        setBoards([]);
+      }
     } catch (error) {
       setError('Erro ao carregar quadros');
       console.error('❌ Erro ao carregar boards:', error);
+      setBoards([]);
     } finally {
       setIsLoading(false);
     }

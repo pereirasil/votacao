@@ -69,6 +69,7 @@ Este é um **sistema híbrido** que combina:
 │  │  Senha: [________________]      │ │
 │  │  Confirmar: [________________]  │ │
 │  │  Role: [Colaborador/Gestor]     │ │
+│  │  ✅ Sistema de Roles Globais    │ │
 │  └─────────────────────────────────┘ │
 └─────────────────────────────────────┘
 ```
@@ -76,6 +77,12 @@ Este é um **sistema híbrido** que combina:
 **Fluxos de Redirecionamento:**
 - **Com roomId:** `/login?roomId=ABC123` → `/avatar?roomId=ABC123` → `/votacao/ABC123`
 - **Sem roomId:** `/login` → `/dashboard`
+
+**Sistema de Roles Globais (NOVO):**
+- **Manager (Gestor):** Acesso completo ao sistema, pode criar boards, gerenciar equipes
+- **Collaborator (Colaborador):** Acesso padrão, pode participar de boards e votações
+- **Padrão:** Se não especificado, assume 'collaborator'
+- **Validação:** Campo opcional com enum UserRole
 
 ### **3. Dashboard (Sistema Trello)**
 ```
@@ -229,8 +236,9 @@ Este é um **sistema híbrido** que combina:
 
 ### **Tabelas Principais:**
 ```sql
--- Usuários
-users (id, name, email, password_hash, is_admin, created_at, updated_at)
+-- Usuários (ATUALIZADO com Roles Globais)
+users (id, name, email, password_hash, role, is_admin, created_at, updated_at)
+-- role: ENUM('manager', 'collaborator') DEFAULT 'collaborator'
 
 -- Boards (Quadros)
 boards (id, name, description, user_id, is_public, created_at, updated_at)
@@ -249,6 +257,37 @@ voting_participants (id, room_id, user_id, user_name, joined_at)
 
 -- Votos
 voting_votes (id, room_id, user_id, story_id, vote_value, created_at)
+```
+
+---
+
+## 🔐 Sistema de Permissões Hierárquico
+
+### **Roles Globais (Nível Sistema):**
+- **Manager (Gestor):**
+  - Acesso completo ao sistema
+  - Pode criar e gerenciar boards
+  - Pode convidar usuários
+  - Acesso a todas as funcionalidades
+  
+- **Collaborator (Colaborador):**
+  - Acesso padrão ao sistema
+  - Pode participar de boards existentes
+  - Pode participar de votações
+  - Funcionalidades limitadas
+
+### **Roles por Board (Nível Projeto):**
+- **Owner:** Criador do board, controle total
+- **Admin:** Pode gerenciar membros e configurações
+- **Member:** Pode criar e editar cards
+- **Viewer:** Apenas visualização
+
+### **Hierarquia de Permissões:**
+```
+Sistema Global → Board Específico → Card Individual
+     ↓              ↓                    ↓
+   Manager      Owner/Admin         Assigned User
+Collaborator    Member/Viewer       Any Member
 ```
 
 ---
@@ -281,10 +320,20 @@ HomePage → [Entrar em Sala] → LoginPage → AvatarSelection → Votacao
 
 ### **AuthService:**
 - `login(email, password)` → Autenticação
-- `register(userData)` → Cadastro
+- `register(userData)` → Cadastro com role global
 - `isAuthenticated()` → Verificação de autenticação
-- `getCurrentUser()` → Dados do usuário atual
+- `getCurrentUser()` → Dados do usuário atual (inclui role)
 - `logout()` → Logout e limpeza
+
+**Exemplo de Cadastro:**
+```javascript
+await authService.register({
+  name: "João Silva",
+  email: "joao@exemplo.com",
+  password: "minhasenha123",
+  role: "manager" // ou "collaborator"
+});
+```
 
 ### **BoardService:**
 - `getBoards()` → Listar quadros

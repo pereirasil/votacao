@@ -191,13 +191,14 @@ class BoardService {
 
   /**
    * Atualiza uma lista
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @param {Object} listData - Novos dados da lista
    * @returns {Promise<Object>} Lista atualizada
    */
-  async updateList(listId, listData) {
+  async updateList(boardId, listId, listData) {
     try {
-      const response = await api.put(`/lists/${listId}`, listData);
+      const response = await api.put(`/boards/${boardId}/lists/${listId}`, listData);
       return { success: true, list: response.data };
     } catch (error) {
       console.error('Erro ao atualizar lista:', error);
@@ -210,12 +211,13 @@ class BoardService {
 
   /**
    * Exclui uma lista
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @returns {Promise<Object>} Resultado da exclusão
    */
-  async deleteList(listId) {
+  async deleteList(boardId, listId) {
     try {
-      await api.delete(`/lists/${listId}`);
+      await api.delete(`/boards/${boardId}/lists/${listId}`);
       return { success: true };
     } catch (error) {
       console.error('Erro ao excluir lista:', error);
@@ -228,12 +230,13 @@ class BoardService {
 
   /**
    * Obtém os cards de uma lista
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @returns {Promise<Object>} Lista de cards
    */
-  async getListCards(listId) {
+  async getListCards(boardId, listId) {
     try {
-      const response = await api.get(`/lists/${listId}/cards`);
+      const response = await api.get(`/boards/${boardId}/lists/${listId}/cards`);
       return { success: true, cards: response.data };
     } catch (error) {
       console.error('Erro ao obter cards:', error);
@@ -246,13 +249,14 @@ class BoardService {
 
   /**
    * Cria um novo card em uma lista
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @param {Object} cardData - Dados do card
    * @returns {Promise<Object>} Card criado
    */
-  async createCard(listId, cardData) {
+  async createCard(boardId, listId, cardData) {
     try {
-      const response = await api.post(`/lists/${listId}/cards`, cardData);
+      const response = await api.post(`/boards/${boardId}/lists/${listId}/cards`, cardData);
       return { success: true, card: response.data };
     } catch (error) {
       console.error('Erro ao criar card:', error);
@@ -265,13 +269,15 @@ class BoardService {
 
   /**
    * Atualiza um card
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @param {Object} cardData - Novos dados do card
    * @returns {Promise<Object>} Card atualizado
    */
-  async updateCard(cardId, cardData) {
+  async updateCard(boardId, listId, cardId, cardData) {
     try {
-      const response = await api.put(`/cards/${cardId}`, cardData);
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}`, cardData);
       return { success: true, card: response.data };
     } catch (error) {
       console.error('Erro ao atualizar card:', error);
@@ -284,12 +290,14 @@ class BoardService {
 
   /**
    * Exclui um card
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @returns {Promise<Object>} Resultado da exclusão
    */
-  async deleteCard(cardId) {
+  async deleteCard(boardId, listId, cardId) {
     try {
-      await api.delete(`/cards/${cardId}`);
+      await api.delete(`/boards/${boardId}/lists/${listId}/cards/${cardId}`);
       return { success: true };
     } catch (error) {
       console.error('Erro ao excluir card:', error);
@@ -302,14 +310,16 @@ class BoardService {
 
   /**
    * Move um card entre listas
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista atual
    * @param {number} cardId - ID do card
    * @param {number} newListId - ID da nova lista
    * @param {number} newPosition - Nova posição na lista
    * @returns {Promise<Object>} Resultado da movimentação
    */
-  async moveCard(cardId, newListId, newPosition) {
+  async moveCard(boardId, listId, cardId, newListId, newPosition) {
     try {
-      const response = await api.put(`/cards/${cardId}/move`, {
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}/move`, {
         list_id: newListId,
         position: newPosition
       });
@@ -347,13 +357,116 @@ class BoardService {
    */
   async getMyTasks() {
     try {
-      const response = await api.get('/cards/my-tasks');
+      const response = await api.get('/sprints/my/tasks');
       return { success: true, tasks: response.data };
     } catch (error) {
       console.error('Erro ao obter tarefas:', error);
       return {
         success: false,
         error: error.message || 'Erro ao carregar tarefas'
+      };
+    }
+  }
+
+  /**
+   * Adiciona um membro ao board
+   * @param {number} boardId - ID do board
+   * @param {Object} memberData - Dados do membro
+   * @returns {Promise<Object>} Membro adicionado
+   */
+  async addBoardMember(boardId, memberData) {
+    try {
+      const response = await api.post(`/boards/${boardId}/members`, memberData);
+      return { success: true, member: response.data };
+    } catch (error) {
+      console.error('Erro ao adicionar membro:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao adicionar membro'
+      };
+    }
+  }
+
+  /**
+   * Atualiza um membro do board
+   * @param {number} boardId - ID do board
+   * @param {number} memberId - ID do membro
+   * @param {Object} memberData - Novos dados do membro
+   * @returns {Promise<Object>} Membro atualizado
+   */
+  async updateBoardMember(boardId, memberId, memberData) {
+    try {
+      const response = await api.put(`/boards/${boardId}/members/${memberId}`, memberData);
+      return { success: true, member: response.data };
+    } catch (error) {
+      console.error('Erro ao atualizar membro:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao atualizar membro'
+      };
+    }
+  }
+
+  /**
+   * Remove um membro do board
+   * @param {number} boardId - ID do board
+   * @param {number} memberId - ID do membro
+   * @returns {Promise<Object>} Resultado da remoção
+   */
+  async removeBoardMember(boardId, memberId) {
+    try {
+      await api.delete(`/boards/${boardId}/members/${memberId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Erro ao remover membro:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao remover membro'
+      };
+    }
+  }
+
+  /**
+   * Move uma lista dentro do board
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
+   * @param {number} newPosition - Nova posição
+   * @returns {Promise<Object>} Resultado da movimentação
+   */
+  async moveList(boardId, listId, newPosition) {
+    try {
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/move`, {
+        position: newPosition
+      });
+      return { success: true, list: response.data };
+    } catch (error) {
+      console.error('Erro ao mover lista:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao mover lista'
+      };
+    }
+  }
+
+  /**
+   * Atribui um card a um usuário
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
+   * @param {number} cardId - ID do card
+   * @param {number} userId - ID do usuário
+   * @returns {Promise<Object>} Resultado da atribuição
+   */
+  async assignCard(boardId, listId, cardId, userId) {
+    try {
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}/assign`, {
+        user_id: userId
+      });
+      return { success: true, card: response.data };
+    } catch (error) {
+      console.error('Erro ao atribuir card:', error);
+      return {
+        success: false,
+        error: error.message || 'Erro ao atribuir card'
       };
     }
   }

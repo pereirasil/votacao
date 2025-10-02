@@ -18,6 +18,8 @@ import {
   FaTimes
 } from 'react-icons/fa';
 import authService from '../services/authService';
+import sprintService from '../services/sprintService';
+import boardService from '../services/boardService';
 import './SprintManagement.css';
 
 const SprintManagement = () => {
@@ -28,6 +30,12 @@ const SprintManagement = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSprint, setEditingSprint] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
+  const [currentBoard, setCurrentBoard] = useState(null);
+  const [showTaskModal, setShowTaskModal] = useState(false);
+  const [selectedSprintId, setSelectedSprintId] = useState(null);
+  const [selectedSprint, setSelectedSprint] = useState(null);
+  const [sprintTasks, setSprintTasks] = useState([]);
+  const [showSprintDetails, setShowSprintDetails] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -47,102 +55,49 @@ const SprintManagement = () => {
       setIsLoading(true);
       console.log('🏃 Carregando sprints...');
       
-      // Dados mock para demonstração
-      const mockSprints = [
-        {
-          id: 1,
-          nome: 'Sprint 1 - Setup Inicial',
-          descricao: 'Configuração inicial do projeto e estrutura base',
-          data_inicio: '2025-01-20',
-          data_fim: '2025-02-03',
-          status: 'ativa',
-          board_id: 1,
-          total_tasks: 8,
-          tasks_concluidas: 5,
-          tasks_em_andamento: 2,
-          tasks_pendentes: 1,
-          progresso: 62.5,
-          created_at: '2025-01-20T10:00:00.000Z'
-        },
-        {
-          id: 2,
-          nome: 'Sprint 2 - Autenticação',
-          descricao: 'Implementação do sistema de autenticação e autorização',
-          data_inicio: '2025-02-04',
-          data_fim: '2025-02-17',
-          status: 'ativa',
-          board_id: 1,
-          total_tasks: 12,
-          tasks_concluidas: 8,
-          tasks_em_andamento: 3,
-          tasks_pendentes: 1,
-          progresso: 66.7,
-          created_at: '2025-02-04T10:00:00.000Z'
-        },
-        {
-          id: 3,
-          nome: 'Sprint 3 - Dashboard',
-          descricao: 'Desenvolvimento do dashboard principal e funcionalidades',
-          data_inicio: '2025-02-18',
-          data_fim: '2025-03-03',
-          status: 'ativa',
-          board_id: 1,
-          total_tasks: 15,
-          tasks_concluidas: 10,
-          tasks_em_andamento: 4,
-          tasks_pendentes: 1,
-          progresso: 66.7,
-          created_at: '2025-02-18T10:00:00.000Z'
-        },
-        {
-          id: 4,
-          nome: 'Sprint 4 - Gestão de Membros',
-          descricao: 'Sistema de gerenciamento de membros e permissões',
-          data_inicio: '2025-03-04',
-          data_fim: '2025-03-17',
-          status: 'ativa',
-          board_id: 1,
-          total_tasks: 10,
-          tasks_concluidas: 6,
-          tasks_em_andamento: 3,
-          tasks_pendentes: 1,
-          progresso: 60.0,
-          created_at: '2025-03-04T10:00:00.000Z'
-        },
-        {
-          id: 5,
-          nome: 'Sprint 5 - Sprints',
-          descricao: 'Implementação do sistema de sprints e planejamento',
-          data_inicio: '2025-03-18',
-          data_fim: '2025-03-31',
-          status: 'ativa',
-          board_id: 1,
-          total_tasks: 8,
-          tasks_concluidas: 3,
-          tasks_em_andamento: 4,
-          tasks_pendentes: 1,
-          progresso: 37.5,
-          created_at: '2025-03-18T10:00:00.000Z'
-        },
-        {
-          id: 6,
-          nome: 'Sprint 0 - Planejamento',
-          descricao: 'Sprint inicial para planejamento e definição de requisitos',
-          data_inicio: '2025-01-06',
-          data_fim: '2025-01-19',
-          status: 'encerrada',
-          board_id: 1,
-          total_tasks: 6,
-          tasks_concluidas: 6,
-          tasks_em_andamento: 0,
-          tasks_pendentes: 0,
-          progresso: 100.0,
-          created_at: '2025-01-06T10:00:00.000Z'
-        }
-      ];
+      // Carregar sprints reais do backend
+      const boardsResult = await boardService.getBoards();
+      if (!boardsResult.success) {
+        console.error('❌ Erro ao carregar boards:', boardsResult.error);
+        setError('Erro ao carregar boards: ' + boardsResult.error);
+        return;
+      }
 
-      setSprints(mockSprints);
-      console.log('✅ Sprints carregadas:', mockSprints.length);
+      const boards = boardsResult.boards;
+      console.log('📋 Boards encontrados:', boards.length);
+
+      // Definir o primeiro board como board atual
+      if (boards.length > 0) {
+        setCurrentBoard(boards[0]);
+        console.log('📋 Board atual definido:', boards[0].name, 'ID:', boards[0].id);
+      }
+
+      // Carregar sprints de todos os boards
+      const allSprints = [];
+      for (const board of boards) {
+        const sprintsResult = await sprintService.getBoardSprints(board.id);
+        if (sprintsResult.success) {
+          // Adicionar informações do board às sprints
+          const sprintsWithBoard = sprintsResult.sprints.map(sprint => {
+            console.log('📋 Sprint do backend:', sprint);
+            return {
+              ...sprint,
+              board_name: board.name,
+              board_id: board.id,
+              // Garantir que o status seja mapeado corretamente
+              status: sprint.status === 'planejada' ? 'ativa' : sprint.status
+            };
+          });
+          allSprints.push(...sprintsWithBoard);
+        } else {
+          console.warn(`⚠️ Erro ao carregar sprints do board ${board.id}:`, sprintsResult.error);
+        }
+      }
+
+      const realSprints = allSprints;
+
+      console.log('✅ Sprints carregadas:', realSprints.length);
+      setSprints(realSprints);
       
     } catch (error) {
       console.error('❌ Erro ao carregar sprints:', error);
@@ -152,32 +107,60 @@ const SprintManagement = () => {
     }
   };
 
+  const loadSprintTasks = async (sprintId) => {
+    try {
+      const result = await sprintService.getSprintTasks(sprintId);
+      if (result.success) {
+        setSprintTasks(result.tasks || []);
+      } else {
+        console.error('Erro ao carregar tarefas da sprint:', result.error);
+        setError('Erro ao carregar tarefas da sprint: ' + result.error);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tarefas da sprint:', error);
+      setError('Erro ao carregar tarefas da sprint.');
+    }
+  };
+
+  const handleViewSprint = async (sprint) => {
+    setSelectedSprint(sprint);
+    await loadSprintTasks(sprint.id);
+    setShowSprintDetails(true);
+  };
+
   const handleCreateSprint = async (sprintData) => {
     try {
       setIsLoading(true);
       console.log('➕ Criando sprint...', sprintData);
       
-      // Simular criação
-      const newSprint = {
-        id: Date.now(),
+      // Adicionar board_id aos dados da sprint
+      const sprintDataWithBoard = {
         ...sprintData,
-        status: 'ativa',
-        total_tasks: 0,
-        tasks_concluidas: 0,
-        tasks_em_andamento: 0,
-        tasks_pendentes: 0,
-        progresso: 0,
-        created_at: new Date().toISOString()
+        board_id: currentBoard?.id || 3 // Usar board atual ou default para 3 (que existe no banco)
       };
       
-      setSprints(prev => [newSprint, ...prev]);
-      setShowCreateModal(false);
-      setSuccess('Sprint criada com sucesso!');
-      setTimeout(() => setSuccess(''), 3000);
+      console.log('📤 Dados completos da sprint:', sprintDataWithBoard);
+      
+      // Criar sprint usando o serviço real
+      const result = await sprintService.createSprint(sprintDataWithBoard);
+      
+      if (result.success) {
+        console.log('✅ Sprint criada com sucesso:', result.sprint);
+        
+        // Recarregar sprints para obter dados atualizados
+        await loadSprints();
+        
+        setShowCreateModal(false);
+        setSuccess('Sprint criada com sucesso!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('❌ Erro ao criar sprint:', result.error);
+        setError('Erro ao criar sprint: ' + result.error);
+      }
       
     } catch (error) {
       console.error('❌ Erro ao criar sprint:', error);
-      setError('Erro ao criar sprint');
+      setError('Erro ao criar sprint: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -188,22 +171,26 @@ const SprintManagement = () => {
       setIsLoading(true);
       console.log('✏️ Editando sprint...', sprintId, sprintData);
       
-      // Simular edição
-      setSprints(prev => 
-        prev.map(sprint => 
-          sprint.id === sprintId 
-            ? { ...sprint, ...sprintData, updated_at: new Date().toISOString() }
-            : sprint
-        )
-      );
+      // Atualizar sprint usando o serviço real
+      const result = await sprintService.updateSprint(sprintId, sprintData);
       
-      setEditingSprint(null);
-      setSuccess('Sprint atualizada com sucesso!');
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.success) {
+        console.log('✅ Sprint atualizada com sucesso:', result.sprint);
+        
+        // Recarregar sprints para obter dados atualizados
+        await loadSprints();
+        
+        setEditingSprint(null);
+        setSuccess('Sprint atualizada com sucesso!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('❌ Erro ao atualizar sprint:', result.error);
+        setError('Erro ao atualizar sprint: ' + result.error);
+      }
       
     } catch (error) {
       console.error('❌ Erro ao editar sprint:', error);
-      setError('Erro ao editar sprint');
+      setError('Erro ao editar sprint: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -218,21 +205,58 @@ const SprintManagement = () => {
       setIsLoading(true);
       console.log('🏁 Encerrando sprint...', sprintId);
       
-      // Simular encerramento
-      setSprints(prev => 
-        prev.map(sprint => 
-          sprint.id === sprintId 
-            ? { ...sprint, status: 'encerrada', updated_at: new Date().toISOString() }
-            : sprint
-        )
-      );
+      // Atualizar sprint para status 'encerrada' usando o serviço real
+      const result = await sprintService.updateSprint(sprintId, { status: 'encerrada' });
       
-      setSuccess('Sprint encerrada com sucesso!');
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.success) {
+        console.log('✅ Sprint encerrada com sucesso:', result.sprint);
+        
+        // Recarregar sprints para obter dados atualizados
+        await loadSprints();
+        
+        setSuccess('Sprint encerrada com sucesso!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('❌ Erro ao encerrar sprint:', result.error);
+        setError('Erro ao encerrar sprint: ' + result.error);
+      }
       
     } catch (error) {
       console.error('❌ Erro ao encerrar sprint:', error);
-      setError('Erro ao encerrar sprint');
+      setError('Erro ao encerrar sprint: ' + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAddTaskToSprint = (sprintId) => {
+    setSelectedSprintId(sprintId);
+    setShowTaskModal(true);
+  };
+
+  const handleCreateTask = async (taskData) => {
+    try {
+      setIsLoading(true);
+      
+      const taskDataWithSprint = {
+        ...taskData,
+        sprint_id: selectedSprintId
+      };
+      
+      const result = await sprintService.addTaskToSprint(taskDataWithSprint);
+      
+      if (result.success) {
+        setShowTaskModal(false);
+        setSelectedSprintId(null);
+        await loadSprints(); // Recarregar sprints para atualizar contadores
+        setSuccess('Tarefa adicionada à sprint com sucesso!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('Erro ao criar tarefa: ' + result.error);
+      }
+    } catch (error) {
+      console.error('❌ Erro ao criar tarefa:', error);
+      setError('Erro ao criar tarefa: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -247,15 +271,25 @@ const SprintManagement = () => {
       setIsLoading(true);
       console.log('🗑️ Excluindo sprint...', sprintId);
       
-      // Simular exclusão
-      setSprints(prev => prev.filter(sprint => sprint.id !== sprintId));
+      // Excluir sprint usando o serviço real
+      const result = await sprintService.deleteSprint(sprintId);
       
-      setSuccess('Sprint excluída com sucesso!');
-      setTimeout(() => setSuccess(''), 3000);
+      if (result.success) {
+        console.log('✅ Sprint excluída com sucesso');
+        
+        // Recarregar sprints para obter dados atualizados
+        await loadSprints();
+        
+        setSuccess('Sprint excluída com sucesso!');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        console.error('❌ Erro ao excluir sprint:', result.error);
+        setError('Erro ao excluir sprint: ' + result.error);
+      }
       
     } catch (error) {
       console.error('❌ Erro ao excluir sprint:', error);
-      setError('Erro ao excluir sprint');
+      setError('Erro ao excluir sprint: ' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -264,11 +298,13 @@ const SprintManagement = () => {
   const getStatusIcon = (status) => {
     switch (status) {
       case 'ativa':
+      case 'planejada':
         return <FaPlay className="status-icon active" />;
       case 'encerrada':
+      case 'concluida':
         return <FaStop className="status-icon ended" />;
       default:
-        return <FaClock className="status-icon" />;
+        return <FaPlay className="status-icon active" />; // Default para 'ativa'
     }
   };
 
@@ -276,10 +312,15 @@ const SprintManagement = () => {
     switch (status) {
       case 'ativa':
         return 'Ativa';
+      case 'planejada':
+        return 'Ativa'; // Mapear 'planejada' para 'Ativa'
       case 'encerrada':
         return 'Encerrada';
+      case 'concluida':
+        return 'Encerrada'; // Mapear 'concluida' para 'Encerrada'
       default:
-        return 'Desconhecido';
+        console.log('⚠️ Status desconhecido:', status);
+        return 'Ativa'; // Default para 'Ativa' para mostrar botões
     }
   };
 
@@ -292,7 +333,7 @@ const SprintManagement = () => {
 
   const getDaysRemaining = (dataFim) => {
     const today = new Date();
-    const endDate = new Date(dataFim);
+    const endDate = new Date(dataFim + 'T00:00:00');
     const diffTime = endDate - today;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays;
@@ -303,7 +344,7 @@ const SprintManagement = () => {
     return sprint.status === filterStatus;
   });
 
-  const activeSprints = sprints.filter(sprint => sprint.status === 'ativa');
+  const activeSprints = sprints.filter(sprint => sprint.status === 'ativa' || sprint.status === 'planejada');
   const endedSprints = sprints.filter(sprint => sprint.status === 'encerrada');
 
   if (isLoading && sprints.length === 0) {
@@ -386,7 +427,7 @@ const SprintManagement = () => {
             <FaTasks />
           </div>
           <div className="stat-info">
-            <h3>{activeSprints.reduce((sum, sprint) => sum + sprint.total_tasks, 0)}</h3>
+            <h3>{activeSprints.reduce((sum, sprint) => sum + Number(sprint.total_tasks || 0), 0)}</h3>
             <p>Total de Tarefas</p>
           </div>
         </div>
@@ -396,7 +437,7 @@ const SprintManagement = () => {
             <FaCheckCircle />
           </div>
           <div className="stat-info">
-            <h3>{activeSprints.reduce((sum, sprint) => sum + sprint.tasks_concluidas, 0)}</h3>
+            <h3>{activeSprints.reduce((sum, sprint) => sum + Number(sprint.tasks_concluidas || 0), 0)}</h3>
             <p>Tarefas Concluídas</p>
           </div>
         </div>
@@ -431,12 +472,12 @@ const SprintManagement = () => {
         <div className="sprints-grid">
           {filteredSprints.map(sprint => {
             const daysRemaining = getDaysRemaining(sprint.data_fim);
-            const isOverdue = daysRemaining < 0 && sprint.status === 'ativa';
+            const isOverdue = daysRemaining < 0 && (sprint.status === 'ativa' || sprint.status === 'planejada');
             
             return (
               <div key={sprint.id} className={`sprint-card ${sprint.status} ${isOverdue ? 'overdue' : ''}`}>
                 <div className="sprint-header-card">
-                  <div className="sprint-title">
+                  <div className="sprint-title" onClick={() => navigate(`/sprint/${sprint.id}/board`)} style={{ cursor: 'pointer' }}>
                     <h3>{sprint.nome}</h3>
                     <div className="sprint-status">
                       {getStatusIcon(sprint.status)}
@@ -444,8 +485,16 @@ const SprintManagement = () => {
                     </div>
                   </div>
                   
-                  {sprint.status === 'ativa' && (
+                  {(sprint.status === 'ativa' || sprint.status === 'planejada') && (
                     <div className="sprint-actions">
+                      <button 
+                        className="action-btn add-task"
+                        onClick={() => handleAddTaskToSprint(sprint.id)}
+                        title="Adicionar Tarefa"
+                      >
+                        <FaPlus />
+                        Nova Tarefa
+                      </button>
                       <button 
                         className="action-btn edit"
                         onClick={() => setEditingSprint(sprint)}
@@ -479,13 +528,13 @@ const SprintManagement = () => {
                   <div className="sprint-dates">
                     <div className="date-item">
                       <FaCalendar />
-                      <span>Início: {new Date(sprint.data_inicio).toLocaleDateString('pt-BR')}</span>
+                      <span>Início: {new Date(sprint.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                     </div>
                     <div className="date-item">
                       <FaCalendar />
-                      <span>Fim: {new Date(sprint.data_fim).toLocaleDateString('pt-BR')}</span>
+                      <span>Fim: {new Date(sprint.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
                     </div>
-                    {sprint.status === 'ativa' && (
+                    {(sprint.status === 'ativa' || sprint.status === 'planejada') && (
                       <div className={`date-item ${isOverdue ? 'overdue' : ''}`}>
                         <FaClock />
                         <span>
@@ -501,14 +550,14 @@ const SprintManagement = () => {
                   <div className="sprint-progress">
                     <div className="progress-header">
                       <span>Progresso</span>
-                      <span>{sprint.progresso.toFixed(1)}%</span>
+                      <span>{Number(sprint.progresso || 0).toFixed(1)}%</span>
                     </div>
                     <div className="progress-bar">
                       <div 
                         className="progress-fill"
                         style={{ 
-                          width: `${sprint.progresso}%`,
-                          backgroundColor: getProgressColor(sprint.progresso)
+                          width: `${Number(sprint.progresso || 0)}%`,
+                          backgroundColor: getProgressColor(Number(sprint.progresso || 0))
                         }}
                       ></div>
                     </div>
@@ -516,21 +565,25 @@ const SprintManagement = () => {
 
                   <div className="sprint-tasks">
                     <div className="task-stats">
-                      <div className="task-stat">
+                      <div 
+                        className="task-stat clickable" 
+                        onClick={() => navigate(`/sprint/${sprint.id}/tasks`)}
+                        title="Ver todas as tarefas da sprint"
+                      >
                         <FaTasks />
-                        <span>{sprint.total_tasks} total</span>
+                        <span>{Number(sprint.total_tasks || 0)} total</span>
                       </div>
                       <div className="task-stat completed">
                         <FaCheckCircle />
-                        <span>{sprint.tasks_concluidas} concluídas</span>
+                        <span>{Number(sprint.tasks_concluidas || 0)} concluídas</span>
                       </div>
                       <div className="task-stat in-progress">
                         <FaExclamationCircle />
-                        <span>{sprint.tasks_em_andamento} em andamento</span>
+                        <span>{Number(sprint.tasks_em_andamento || 0)} em andamento</span>
                       </div>
                       <div className="task-stat pending">
                         <FaClock />
-                        <span>{sprint.tasks_pendentes} pendentes</span>
+                        <span>{Number(sprint.tasks_pendentes || 0)} pendentes</span>
                       </div>
                     </div>
                   </div>
@@ -550,6 +603,36 @@ const SprintManagement = () => {
             setEditingSprint(null);
           }}
           onSave={editingSprint ? handleEditSprint : handleCreateSprint}
+        />
+      )}
+
+      {/* Create Task Modal */}
+      {showTaskModal && (
+        <TaskModal
+          sprintId={selectedSprintId}
+          onClose={() => {
+            setShowTaskModal(false);
+            setSelectedSprintId(null);
+          }}
+          onSave={handleCreateTask}
+        />
+      )}
+
+      {/* Sprint Details Modal */}
+      {showSprintDetails && selectedSprint && (
+        <SprintDetailsModal
+          sprint={selectedSprint}
+          tasks={sprintTasks}
+          onClose={() => {
+            setShowSprintDetails(false);
+            setSelectedSprint(null);
+            setSprintTasks([]);
+          }}
+          onAddTask={() => {
+            setShowSprintDetails(false);
+            setSelectedSprintId(selectedSprint.id);
+            setShowTaskModal(true);
+          }}
         />
       )}
     </div>
@@ -606,7 +689,13 @@ const SprintModal = ({ sprint, onClose, onSave }) => {
       return;
     }
     
-    onSave(sprint?.id, formData);
+    if (sprint) {
+      // Editando sprint existente
+      onSave(sprint.id, formData);
+    } else {
+      // Criando nova sprint
+      onSave(formData);
+    }
   };
 
   return (
@@ -672,6 +761,264 @@ const SprintModal = ({ sprint, onClose, onSave }) => {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal para criar tarefa na sprint
+const TaskModal = ({ sprintId, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    priority: 'medium',
+    estimated_hours: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!formData.title.trim()) return;
+    
+    setIsSubmitting(true);
+    try {
+      await onSave(formData);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <h2>Nova Tarefa</h2>
+        
+        <form onSubmit={handleSubmit} className="create-task-form">
+          <div className="form-group">
+            <label>Título da Tarefa</label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Ex: Implementar login"
+              required
+              maxLength={255}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Descrição</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Descreva a tarefa em detalhes..."
+              rows={3}
+              maxLength={1000}
+            />
+          </div>
+
+          <div className="form-group">
+            <label>Prioridade</label>
+            <select
+              value={formData.priority}
+              onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
+            >
+              <option value="low">Baixa</option>
+              <option value="medium">Média</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+          </div>
+
+          <div className="form-group">
+            <label>Horas Estimadas</label>
+            <input
+              type="number"
+              value={formData.estimated_hours}
+              onChange={(e) => setFormData(prev => ({ ...prev, estimated_hours: e.target.value }))}
+              placeholder="Ex: 8"
+              min="0"
+              step="0.5"
+            />
+          </div>
+
+          <div className="modal-actions">
+            <button type="button" onClick={onClose} className="cancel-btn">
+              Cancelar
+            </button>
+            <button type="submit" className="save-btn" disabled={isSubmitting}>
+              {isSubmitting ? 'Criando...' : 'Criar Tarefa'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// Modal para visualizar detalhes da sprint e suas tarefas
+const SprintDetailsModal = ({ sprint, tasks, onClose, onAddTask }) => {
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pendente': return '#f59e0b';
+      case 'em_andamento': return '#3b82f6';
+      case 'concluida': return '#10b981';
+      case 'cancelada': return '#ef4444';
+      default: return '#6b7280';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'baixa': return '#10b981';
+      case 'media': return '#f59e0b';
+      case 'alta': return '#ef4444';
+      case 'urgente': return '#dc2626';
+      default: return '#6b7280';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'pendente': return 'Pendente';
+      case 'em_andamento': return 'Em Andamento';
+      case 'concluida': return 'Concluída';
+      case 'cancelada': return 'Cancelada';
+      default: return status;
+    }
+  };
+
+  const getPriorityLabel = (priority) => {
+    switch (priority) {
+      case 'baixa': return 'Baixa';
+      case 'media': return 'Média';
+      case 'alta': return 'Alta';
+      case 'urgente': return 'Urgente';
+      default: return priority;
+    }
+  };
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content sprint-details-modal">
+        <div className="modal-header">
+          <div className="sprint-header-info">
+            <h2>{sprint.nome}</h2>
+            <div className="sprint-meta">
+              <span className="sprint-status-badge" style={{ backgroundColor: getStatusColor(sprint.status) }}>
+                {getStatusLabel(sprint.status)}
+              </span>
+              <span className="sprint-dates">
+                {new Date(sprint.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')} - {new Date(sprint.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
+              </span>
+            </div>
+          </div>
+          <div className="modal-actions">
+            <button className="action-btn add-task" onClick={onAddTask}>
+              <FaPlus />
+              Nova Tarefa
+            </button>
+            <button className="close-btn" onClick={onClose}>
+              <FaTimes />
+            </button>
+          </div>
+        </div>
+
+        <div className="modal-body">
+          {sprint.descricao && (
+            <div className="sprint-description">
+              <p>{sprint.descricao}</p>
+            </div>
+          )}
+
+          <div className="sprint-stats">
+            <div className="stat-item">
+              <FaTasks />
+              <span>{tasks.length} Tarefas</span>
+            </div>
+            <div className="stat-item completed">
+              <FaCheckCircle />
+              <span>{tasks.filter(t => t.status === 'concluida').length} Concluídas</span>
+            </div>
+            <div className="stat-item in-progress">
+              <FaExclamationCircle />
+              <span>{tasks.filter(t => t.status === 'em_andamento').length} Em Andamento</span>
+            </div>
+            <div className="stat-item pending">
+              <FaClock />
+              <span>{tasks.filter(t => t.status === 'pendente').length} Pendentes</span>
+            </div>
+          </div>
+
+          <div className="tasks-section">
+            <h3>Tarefas da Sprint</h3>
+            {tasks.length === 0 ? (
+              <div className="empty-tasks">
+                <FaTasks />
+                <p>Nenhuma tarefa encontrada nesta sprint.</p>
+                <button className="add-first-task-btn" onClick={onAddTask}>
+                  <FaPlus />
+                  Adicionar Primeira Tarefa
+                </button>
+              </div>
+            ) : (
+              <div className="tasks-list">
+                {tasks.map(task => (
+                  <div key={task.id} className="task-item">
+                    <div className="task-header">
+                      <div className="task-title">
+                        <h4>{task.card?.title || 'Tarefa sem título'}</h4>
+                        <div className="task-meta">
+                          <span 
+                            className="task-status" 
+                            style={{ backgroundColor: getStatusColor(task.status) }}
+                          >
+                            {getStatusLabel(task.status)}
+                          </span>
+                          <span 
+                            className="task-priority" 
+                            style={{ backgroundColor: getPriorityColor(task.prioridade) }}
+                          >
+                            {getPriorityLabel(task.prioridade)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="task-actions">
+                        {task.estimativa_horas > 0 && (
+                          <span className="task-hours">
+                            <FaClock />
+                            {task.estimativa_horas}h
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {task.card?.description && (
+                      <div className="task-description">
+                        <p>{task.card.description}</p>
+                      </div>
+                    )}
+
+                    {task.observacoes && (
+                      <div className="task-notes">
+                        <strong>Observações:</strong>
+                        <p>{task.observacoes}</p>
+                      </div>
+                    )}
+
+                    {task.data_limite && (
+                      <div className="task-deadline">
+                        <FaCalendar />
+                        <span>Prazo: {new Date(task.data_limite).toLocaleDateString('pt-BR')}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

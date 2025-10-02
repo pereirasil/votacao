@@ -36,13 +36,14 @@ class CardService {
 
   /**
    * Obtém todos os cards de uma lista
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @returns {Promise<Object>} Lista de cards
    */
-  async getCards(listId) {
+  async getCards(boardId, listId) {
     try {
-      console.log('🌐 Fazendo requisição de cards para:', `/lists/${listId}/cards`);
-      const response = await api.get(`/lists/${listId}/cards`);
+      console.log('🌐 Fazendo requisição de cards para:', `/boards/${boardId}/lists/${listId}/cards`);
+      const response = await api.get(`/boards/${boardId}/lists/${listId}/cards`);
       
       if (!response.data) {
         return {
@@ -60,13 +61,15 @@ class CardService {
 
   /**
    * Obtém um card específico por ID
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @returns {Promise<Object>} Dados do card
    */
-  async getCard(cardId) {
+  async getCard(boardId, listId, cardId) {
     try {
-      console.log('🌐 Fazendo requisição de card para:', `/cards/${cardId}`);
-      const response = await api.get(`/cards/${cardId}`);
+      console.log('🌐 Fazendo requisição de card para:', `/boards/${boardId}/lists/${listId}/cards/${cardId}`);
+      const response = await api.get(`/boards/${boardId}/lists/${listId}/cards/${cardId}`);
       
       if (!response.data) {
         return {
@@ -84,16 +87,17 @@ class CardService {
 
   /**
    * Cria um novo card
+   * @param {number} boardId - ID do board
    * @param {number} listId - ID da lista
    * @param {Object} cardData - Dados do card
    * @returns {Promise<Object>} Card criado
    */
-  async createCard(listId, cardData) {
+  async createCard(boardId, listId, cardData) {
     try {
-      console.log('🌐 Fazendo requisição de criação de card para:', `/lists/${listId}/cards`);
+      console.log('🌐 Fazendo requisição de criação de card para:', `/boards/${boardId}/lists/${listId}/cards`);
       console.log('📤 Dados enviados:', cardData);
       
-      const response = await api.post(`/lists/${listId}/cards`, cardData);
+      const response = await api.post(`/boards/${boardId}/lists/${listId}/cards`, cardData);
       
       if (!response.data) {
         return {
@@ -111,16 +115,18 @@ class CardService {
 
   /**
    * Atualiza um card existente
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @param {Object} cardData - Novos dados do card
    * @returns {Promise<Object>} Card atualizado
    */
-  async updateCard(cardId, cardData) {
+  async updateCard(boardId, listId, cardId, cardData) {
     try {
-      console.log('🌐 Fazendo requisição de atualização de card para:', `/cards/${cardId}`);
+      console.log('🌐 Fazendo requisição de atualização de card para:', `/boards/${boardId}/lists/${listId}/cards/${cardId}`);
       console.log('📤 Dados enviados:', cardData);
       
-      const response = await api.put(`/cards/${cardId}`, cardData);
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}`, cardData);
       
       if (!response.data) {
         return {
@@ -138,12 +144,14 @@ class CardService {
 
   /**
    * Exclui um card
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @returns {Promise<Object>} Resultado da exclusão
    */
-  async deleteCard(cardId) {
+  async deleteCard(boardId, listId, cardId) {
     try {
-      await api.delete(`/cards/${cardId}`);
+      await api.delete(`/boards/${boardId}/lists/${listId}/cards/${cardId}`);
       return { success: true };
     } catch (error) {
       console.error('Erro ao excluir card:', error);
@@ -156,14 +164,16 @@ class CardService {
 
   /**
    * Move um card entre listas
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista atual
    * @param {number} cardId - ID do card
    * @param {number} newListId - ID da nova lista
    * @param {number} newPosition - Nova posição na lista
    * @returns {Promise<Object>} Resultado da movimentação
    */
-  async moveCard(cardId, newListId, newPosition) {
+  async moveCard(boardId, listId, cardId, newListId, newPosition) {
     try {
-      const response = await api.put(`/cards/${cardId}/move`, {
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}/move`, {
         list_id: newListId,
         position: newPosition
       });
@@ -179,14 +189,16 @@ class CardService {
 
   /**
    * Atribui um card a um usuário
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @param {number} userId - ID do usuário
    * @returns {Promise<Object>} Resultado da atribuição
    */
-  async assignCard(cardId, userId) {
+  async assignCard(boardId, listId, cardId, userId) {
     try {
-      const response = await api.put(`/cards/${cardId}/assign`, {
-        assigned_user_id: userId
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}/assign`, {
+        user_id: userId
       });
       return { success: true, card: response.data };
     } catch (error) {
@@ -200,13 +212,15 @@ class CardService {
 
   /**
    * Remove atribuição de um card
+   * @param {number} boardId - ID do board
+   * @param {number} listId - ID da lista
    * @param {number} cardId - ID do card
    * @returns {Promise<Object>} Resultado da remoção
    */
-  async unassignCard(cardId) {
+  async unassignCard(boardId, listId, cardId) {
     try {
-      const response = await api.put(`/cards/${cardId}/assign`, {
-        assigned_user_id: null
+      const response = await api.put(`/boards/${boardId}/lists/${listId}/cards/${cardId}/assign`, {
+        user_id: null
       });
       return { success: true, card: response.data };
     } catch (error) {
@@ -224,7 +238,7 @@ class CardService {
    */
   async getMyTasks() {
     try {
-      const response = await api.get('/cards/my-tasks');
+      const response = await api.get('/sprints/my/tasks');
       return { success: true, tasks: response.data };
     } catch (error) {
       console.error('Erro ao obter tarefas:', error);

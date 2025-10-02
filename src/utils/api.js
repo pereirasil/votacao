@@ -1,6 +1,6 @@
 // Configurações do ambiente
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (IS_PRODUCTION ? 'https://api.timeboard.site' : 'http://localhost:3003');
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (IS_PRODUCTION ? 'https://timeboard.site' : 'http://localhost:3003');
 
 /**
  * Classe para tratamento de erros da API
@@ -33,6 +33,20 @@ class NetworkError extends Error {
  * @returns {Promise<Object>} Resposta da API
  */
 const makeRequest = async (url, options = {}) => {
+  // Montar query string a partir de options.params (se fornecido)
+  let finalUrl = `${BACKEND_URL}${url}`;
+  if (options && options.params && typeof options.params === 'object') {
+    const searchParams = new URLSearchParams();
+    Object.entries(options.params).forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        searchParams.append(key, String(value));
+      }
+    });
+    const qs = searchParams.toString();
+    if (qs) {
+      finalUrl += (finalUrl.includes('?') ? '&' : '?') + qs;
+    }
+  }
   const token = localStorage.getItem('authToken');
   
   const defaultOptions = {
@@ -52,13 +66,13 @@ const makeRequest = async (url, options = {}) => {
   };
 
   try {
-    console.log('🌐 Fazendo requisição para:', `${BACKEND_URL}${url}`, {
+    console.log('🌐 Fazendo requisição para:', finalUrl, {
       method: config.method || 'GET',
       headers: config.headers,
       body: config.body ? 'Dados enviados' : 'Sem dados'
     });
     
-    const response = await fetch(`${BACKEND_URL}${url}`, config);
+    const response = await fetch(finalUrl, config);
     
     console.log('🌐 Resposta recebida:', {
       status: response.status,

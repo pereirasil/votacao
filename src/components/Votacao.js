@@ -3,7 +3,8 @@ import { useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 import './Votacao.css';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://192.168.0.127:3002';
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || (IS_PRODUCTION ? 'https://timeboard.site' : 'http://localhost:3003');
 
 const Votacao = () => {
   const location = useLocation();
