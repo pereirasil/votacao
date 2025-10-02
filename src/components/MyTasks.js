@@ -16,6 +16,8 @@ import {
   FaFilter
 } from 'react-icons/fa';
 import authService from '../services/authService';
+import sprintService from '../services/sprintService';
+import boardService from '../services/boardService';
 import './MyTasks.css';
 
 const MyTasks = () => {
@@ -49,108 +51,45 @@ const MyTasks = () => {
       setError('');
       console.log(`📅 Carregando sprints para ${months[month]} ${year}...`);
       
-      // Dados mock para demonstração
-      const allSprints = [
-        {
-          id: 1,
-          nome: 'Sprint 1 - Setup Inicial',
-          descricao: 'Configuração inicial do projeto e estrutura base',
-          data_inicio: '2025-01-15',
-          data_fim: '2025-01-29',
-          status: 'encerrada',
-          board_id: 3,
-          total_tasks: 8,
-          tasks_concluidas: 8,
-          tasks_em_andamento: 0,
-          tasks_pendentes: 0,
-          progresso: 100.0,
-          tasks: [
-            { id: 1, titulo: 'Configurar ambiente de desenvolvimento', status: 'done', prioridade: 'high' },
-            { id: 2, titulo: 'Criar estrutura base do projeto', status: 'done', prioridade: 'high' },
-            { id: 3, titulo: 'Configurar banco de dados', status: 'done', prioridade: 'medium' },
-            { id: 4, titulo: 'Implementar autenticação básica', status: 'done', prioridade: 'high' }
-          ]
-        },
-        {
-          id: 2,
-          nome: 'Sprint 2 - Autenticação',
-          descricao: 'Implementação do sistema de autenticação e autorização',
-          data_inicio: '2025-02-01',
-          data_fim: '2025-02-14',
-          status: 'encerrada',
-          board_id: 3,
-          total_tasks: 12,
-          tasks_concluidas: 12,
-          tasks_em_andamento: 0,
-          tasks_pendentes: 0,
-          progresso: 100.0,
-          tasks: [
-            { id: 5, titulo: 'Implementar login com JWT', status: 'done', prioridade: 'high' },
-            { id: 6, titulo: 'Criar sistema de permissões', status: 'done', prioridade: 'high' },
-            { id: 7, titulo: 'Implementar recuperação de senha', status: 'done', prioridade: 'medium' },
-            { id: 8, titulo: 'Criar middleware de autenticação', status: 'done', prioridade: 'high' }
-          ]
-        },
-        {
-          id: 3,
-          nome: 'Sprint 3 - Dashboard',
-          descricao: 'Desenvolvimento do dashboard principal e funcionalidades',
-          data_inicio: '2025-03-01',
-          data_fim: '2025-03-14',
-          status: 'ativa',
-          board_id: 3,
-          total_tasks: 15,
-          tasks_concluidas: 10,
-          tasks_em_andamento: 4,
-          tasks_pendentes: 1,
-          progresso: 66.7,
-          tasks: [
-            { id: 9, titulo: 'Criar layout do dashboard', status: 'done', prioridade: 'high' },
-            { id: 10, titulo: 'Implementar listagem de quadros', status: 'done', prioridade: 'high' },
-            { id: 11, titulo: 'Criar sistema de filtros', status: 'doing', prioridade: 'medium' },
-            { id: 12, titulo: 'Implementar busca de quadros', status: 'doing', prioridade: 'medium' },
-            { id: 13, titulo: 'Criar modal de criação de quadros', status: 'todo', prioridade: 'low' }
-          ]
-        },
-        {
-          id: 4,
-          nome: 'Sprint 4 - Gestão de Membros',
-          descricao: 'Sistema de gerenciamento de membros e permissões',
-          data_inicio: '2025-04-01',
-          data_fim: '2025-04-14',
-          status: 'ativa',
-          board_id: 3,
-          total_tasks: 10,
-          tasks_concluidas: 6,
-          tasks_em_andamento: 3,
-          tasks_pendentes: 1,
-          progresso: 60.0,
-          tasks: [
-            { id: 14, titulo: 'Criar interface de gestão de membros', status: 'done', prioridade: 'high' },
-            { id: 15, titulo: 'Implementar convite de membros', status: 'done', prioridade: 'high' },
-            { id: 16, titulo: 'Criar sistema de roles', status: 'doing', prioridade: 'medium' },
-            { id: 17, titulo: 'Implementar remoção de membros', status: 'todo', prioridade: 'low' }
-          ]
+      // Carregar sprints reais do backend
+      const boardsResult = await boardService.getBoards();
+      if (!boardsResult.success) {
+        console.error('❌ Erro ao carregar boards:', boardsResult.error);
+        setError('Erro ao carregar boards: ' + boardsResult.error);
+        return;
+      }
+
+      const boards = boardsResult.boards;
+      console.log('📋 Boards encontrados:', boards.length);
+
+      // Carregar sprints de todos os boards
+      const allSprints = [];
+      for (const board of boards) {
+        const sprintsResult = await sprintService.getBoardSprints(board.id);
+        if (sprintsResult.success) {
+          // Adicionar informações do board às sprints
+          const sprintsWithBoard = sprintsResult.sprints.map(sprint => {
+            console.log('📋 Sprint do backend:', sprint);
+            return {
+              ...sprint,
+              board_name: board.name,
+              board_id: board.id,
+              // Garantir que o status seja mapeado corretamente
+              status: sprint.status === 'planejada' ? 'ativa' : sprint.status
+            };
+          });
+          allSprints.push(...sprintsWithBoard);
+        } else {
+          console.warn(`⚠️ Erro ao carregar sprints do board ${board.id}:`, sprintsResult.error);
         }
-      ];
+      }
 
-      // Filtrar sprints pelo mês selecionado
-      const filteredSprints = allSprints.filter(sprint => {
-        const sprintStartDate = new Date(sprint.data_inicio);
-        const sprintEndDate = new Date(sprint.data_fim);
-        
-        // Verificar se a sprint tem alguma data no mês selecionado
-        return (sprintStartDate.getMonth() === month && sprintStartDate.getFullYear() === year) ||
-               (sprintEndDate.getMonth() === month && sprintEndDate.getFullYear() === year) ||
-               (sprintStartDate <= new Date(year, month, 1) && sprintEndDate >= new Date(year, month + 1, 0));
-      });
-
-      setSprints(filteredSprints);
-      console.log(`✅ Sprints encontradas para ${months[month]} ${year}:`, filteredSprints.length);
+      console.log('✅ Sprints carregadas:', allSprints.length);
+      setSprints(allSprints);
       
     } catch (error) {
       console.error('❌ Erro ao carregar sprints:', error);
-      setError('Erro ao carregar sprints do mês selecionado');
+      setError('Erro ao carregar sprints');
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +101,21 @@ const MyTasks = () => {
 
   const handleYearChange = (year) => {
     setSelectedYear(year);
+  };
+
+  const loadSprintTasks = async (sprintId) => {
+    try {
+      const result = await sprintService.getSprintTasks(sprintId);
+      if (result.success) {
+        return result.tasks || [];
+      } else {
+        console.error('Erro ao carregar tarefas da sprint:', result.error);
+        return [];
+      }
+    } catch (error) {
+      console.error('Erro ao carregar tarefas da sprint:', error);
+      return [];
+    }
   };
 
   const getStatusIcon = (status) => {
@@ -311,6 +265,51 @@ const MyTasks = () => {
         </div>
       </div>
 
+      {/* Stats */}
+      <div className="stats-section">
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaTasks />
+            </div>
+            <div className="stat-info">
+              <h3>{sprints.reduce((sum, sprint) => sum + Number(sprint.total_tasks || 0), 0)}</h3>
+              <p>Total de Tarefas</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaCheckCircle />
+            </div>
+            <div className="stat-info">
+              <h3>{sprints.reduce((sum, sprint) => sum + Number(sprint.tasks_concluidas || 0), 0)}</h3>
+              <p>Concluídas</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaClock />
+            </div>
+            <div className="stat-info">
+              <h3>{sprints.reduce((sum, sprint) => sum + Number(sprint.tasks_em_andamento || 0), 0)}</h3>
+              <p>Em Andamento</p>
+            </div>
+          </div>
+          
+          <div className="stat-card">
+            <div className="stat-icon">
+              <FaExclamationCircle />
+            </div>
+            <div className="stat-info">
+              <h3>{sprints.reduce((sum, sprint) => sum + Number(sprint.tasks_pendentes || 0), 0)}</h3>
+              <p>Pendentes</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Content */}
       <div className="my-tasks-content">
         {error && (
@@ -363,10 +362,10 @@ const MyTasks = () => {
                     </div>
                     <div className="sprint-dates">
                       <span className="date-item">
-                        <FaCalendar /> {new Date(sprint.data_inicio).toLocaleDateString('pt-BR')}
+                        <FaCalendar /> {new Date(sprint.data_inicio + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </span>
                       <span className="date-item">
-                        <FaCalendar /> {new Date(sprint.data_fim).toLocaleDateString('pt-BR')}
+                        <FaCalendar /> {new Date(sprint.data_fim + 'T00:00:00').toLocaleDateString('pt-BR')}
                       </span>
                     </div>
                   </div>
@@ -391,29 +390,37 @@ const MyTasks = () => {
 
                     <div className="tasks-section">
                       <h4>
-                        <FaTasks /> Tarefas da Sprint ({sprint.tasks.length})
+                        <FaTasks /> Tarefas da Sprint ({sprint.total_tasks || 0})
                       </h4>
                       
-                      <div className="tasks-list">
-                        {sprint.tasks.map(task => (
-                          <div key={task.id} className={`task-item ${task.status}`}>
-                            <div className="task-info">
-                              <div className="task-status">
-                                {getTaskStatusIcon(task.status)}
-                                <span className="status-label">{getTaskStatusLabel(task.status)}</span>
+                      <div className="tasks-summary">
+                        <div className="task-stats">
+                          <div className="task-stat">
+                            <FaTasks />
+                            <span>{Number(sprint.total_tasks || 0)} total</span>
                               </div>
-                              <h5 className="task-title">{task.titulo}</h5>
+                          <div className="task-stat completed">
+                            <FaCheckCircle />
+                            <span>{Number(sprint.tasks_concluidas || 0)} concluídas</span>
                             </div>
-                            <div className="task-meta">
-                              <span 
-                                className="priority-badge"
-                                style={{ backgroundColor: getPriorityColor(task.prioridade) }}
-                              >
-                                {getPriorityLabel(task.prioridade)}
-                              </span>
+                          <div className="task-stat in-progress">
+                            <FaClock />
+                            <span>{Number(sprint.tasks_em_andamento || 0)} em andamento</span>
                             </div>
+                          <div className="task-stat pending">
+                            <FaExclamationCircle />
+                            <span>{Number(sprint.tasks_pendentes || 0)} pendentes</span>
                           </div>
-                        ))}
+                        </div>
+                        <div className="progress-bar">
+                          <div 
+                            className="progress-fill" 
+                            style={{ width: `${sprint.progresso || 0}%` }}
+                          ></div>
+                        </div>
+                        <div className="progress-text">
+                          {sprint.progresso || 0}% concluído
+                        </div>
                       </div>
                     </div>
                   </div>
