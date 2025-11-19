@@ -222,12 +222,34 @@
 
 @media (max-width: 768px) {
   .home-header {
-    justify-content: center;
-    text-align: center;
+    padding: 15px 20px;
+  }
+
+  .logo {
+    width: 35px;
+    height: 35px;
+  }
+
+  .logo-title {
+    font-size: 16px;
+  }
+
+  .logo-subtitle {
+    font-size: 12px;
   }
 
   .nav-menu {
-    justify-content: center;
+    gap: 10px;
+  }
+
+  .theme-toggle {
+    padding: 6px;
+    font-size: 18px;
+  }
+
+  .start-game-btn {
+    padding: 10px 20px;
+    font-size: 14px;
   }
 
   .main-content {
